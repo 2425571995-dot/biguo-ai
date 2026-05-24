@@ -10,7 +10,8 @@ interface Post {
 }
 
 function App() {
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem('ds_key') || '')
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem('xhs_key') || '')
+  const [showKeyInput, setShowKeyInput] = useState(false)
   const [product, setProduct] = useState('')
   const [features, setFeatures] = useState('')
   const [price, setPrice] = useState('')
@@ -20,11 +21,69 @@ function App() {
   const [copiedId, setCopiedId] = useState<number | null>(null)
 
   const generate = async () => {
-    if (!apiKey.trim()) return alert('请先设置 API Key')
     if (!product.trim()) return alert('请输入产品名称')
 
     setLoading(true)
-    const prompt = `你是小红书爆款文案专家。根据以下产品信息，生成3条小红书风格的种草文案。
+    try {
+      // 优先使用后端 API（Vercel 部署时）
+      let res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product, features, price, audience }),
+      })
+
+      // 如果后端不可用（Gitee Pages 等纯静态托管），使用用户自带 Key
+      if (!res.ok && res.status === 404) {
+        if (!apiKey.trim()) {
+          setShowKeyInput(true)
+          throw new Error('请先设置 DeepSeek API Key')
+        }
+        res = await fetch(DEEPSEEK_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: 'deepseek-chat',
+            messages: [
+              { role: 'system', content: '你是一个小红书爆款文案生成助手。只输出JSON，不输出其他内容。' },
+              {
+                role: 'user',
+                content: buildPrompt(),
+              },
+            ],
+            temperature: 0.9,
+            max_tokens: 2048,
+          }),
+        })
+      }
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || data.error?.message || '生成失败')
+      }
+
+      // Vercel 后端返回 { posts: [...] }，DeepSeek 直接返回 choices
+      let parsed: Post[]
+      if (data.posts) {
+        parsed = data.posts
+      } else {
+        const raw = data.choices[0].message.content
+        const cleaned = raw.replace(/```json\n?/g, '').replace(/```/g, '').trim()
+        parsed = JSON.parse(cleaned)
+      }
+
+      setPosts(parsed.map((p, i) => ({ ...p, id: i })))
+    } catch (e: any) {
+      alert('生成失败: ' + e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const buildPrompt = () =>
+    `你是小红书爆款文案专家。根据以下产品信息，生成3条小红书风格的种草文案。
 
 产品：${product}
 卖点：${features || '请根据产品名称自行提炼'}
@@ -39,40 +98,6 @@ function App() {
 
 请严格按照以下JSON格式输出，不要输出其他内容：
 [{"title":"标题","content":"正文内容","tags":["标签1","标签2","标签3"]}]`
-
-    try {
-      const res = await fetch(DEEPSEEK_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'deepseek-chat',
-          messages: [
-            { role: 'system', content: '你是一个小红书爆款文案生成助手。只输出JSON，不输出其他内容。' },
-            { role: 'user', content: prompt },
-          ],
-          temperature: 0.9,
-          max_tokens: 2048,
-        }),
-      })
-
-      const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.error?.message || '请求失败')
-      }
-
-      const raw = data.choices[0].message.content
-      const cleaned = raw.replace(/```json\n?/g, '').replace(/```/g, '').trim()
-      const parsed: Post[] = JSON.parse(cleaned)
-      setPosts(parsed.map((p, i) => ({ ...p, id: i })))
-    } catch (e: any) {
-      alert('生成失败: ' + e.message)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const copyPost = (post: Post) => {
     const text = `${post.title}\n\n${post.content}\n\n${post.tags.join(' ')}`
@@ -89,7 +114,7 @@ function App() {
 
   const saveKey = (v: string) => {
     setApiKey(v)
-    localStorage.setItem('ds_key', v)
+    localStorage.setItem('xhs_key', v)
   }
 
   const inputCls =
@@ -97,7 +122,6 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50">
-      {/* Header */}
       <header className="border-b border-pink-100 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-2">
@@ -109,25 +133,28 @@ function App() {
       </header>
 
       <main className="mx-auto max-w-4xl px-4 py-8">
-        {/* API Key */}
-        <details className="mb-6 rounded-xl border border-pink-100 bg-white p-4">
-          <summary className="cursor-pointer text-sm font-medium text-gray-500">API Key 设置</summary>
-          <input
-            type="password"
-            placeholder="输入你的 DeepSeek API Key"
-            value={apiKey}
-            onChange={(e) => saveKey(e.target.value)}
-            className={inputCls + ' mt-3'}
-          />
-          <p className="mt-1 text-xs text-gray-400">
-            密钥保存在浏览器本地，不会上传到任何服务器。
-            <a href="https://platform.deepseek.com/api_keys" target="_blank" className="ml-1 text-pink-500 underline">
-              获取 Key
-            </a>
-          </p>
-        </details>
+        {/* API Key — 纯静态托管时需要 */}
+        {showKeyInput && (
+          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <p className="mb-2 text-sm text-amber-700">
+              检测到后端服务不可用，请填入你的 DeepSeek API Key（免费获取）：
+            </p>
+            <input
+              type="password"
+              placeholder="sk-..."
+              value={apiKey}
+              onChange={(e) => saveKey(e.target.value)}
+              className={inputCls}
+            />
+            <p className="mt-1 text-xs text-amber-500">
+              密钥仅保存在你的浏览器本地。
+              <a href="https://platform.deepseek.com/api_keys" target="_blank" className="ml-1 underline">
+                点此获取（新用户送500万tokens）
+              </a>
+            </p>
+          </div>
+        )}
 
-        {/* Input Form */}
         <div className="rounded-2xl border border-pink-100 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-lg font-semibold text-gray-700">📝 产品信息</h2>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -189,7 +216,6 @@ function App() {
           </button>
         </div>
 
-        {/* Results */}
         {posts.length > 0 && (
           <div className="mt-8">
             <div className="mb-4 flex items-center justify-between">
@@ -230,9 +256,11 @@ function App() {
         )}
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-pink-100 py-6 text-center text-sm text-gray-400">
-        小红书AI文案生成器 · Prompt 驱动 · 仅供学习交流
+        小红书AI文案生成器 · DeepSeek 驱动 ·
+        <button onClick={() => setShowKeyInput(!showKeyInput)} className="ml-1 text-pink-400 hover:underline cursor-pointer">
+          {showKeyInput ? '收起设置' : 'API 设置'}
+        </button>
       </footer>
     </div>
   )
