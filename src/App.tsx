@@ -35,22 +35,46 @@ interface Post {
   tags: string[]
 }
 
-// 鲁棒 JSON 解析：处理 DeepSeek 返回的不规范 JSON（尾随逗号、单引号、截断等）
+// 鲁棒 JSON 解析：处理 DeepSeek 返回的各种不规范 JSON
 function parseJSONPosts(raw: string): Omit<Post, 'id'>[] {
+  // 剥离 markdown 代码块
   let cleaned = raw.replace(/```json\n?/g, '').replace(/```/g, '').trim()
-  // 提取 JSON 数组部分（忽略前后多余文本）
-  const m = cleaned.match(/\[[\s\S]*?\]/)
+  // 提取 JSON 数组部分
+  const m = cleaned.match(/\[[\s\S]*\]/)
   if (m) cleaned = m[0]
-  // 移除尾随逗号（如 },] 或 ],）
+
+  // 尝试 1：直接解析（尾随逗号修复）
   cleaned = cleaned.replace(/,(\s*[}\]])/g, '$1')
-  try {
-    return JSON.parse(cleaned)
-  } catch {
-    // 更多修复：单引号 -> 双引号，缺引号的 key 补引号
-    cleaned = cleaned.replace(/'/g, '"')
-    cleaned = cleaned.replace(/([{,])\s*(\w+)\s*:/g, '$1"$2":')
-    return JSON.parse(cleaned)
+  try { return JSON.parse(cleaned) } catch {}
+
+  // 尝试 2：修复字符串值中的未转义引号和换行
+  // 找到所有 content 字段的值，对其中的 " 和 \n 进行转义
+  cleaned = cleaned.replace(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/gs, (_, c) => {
+    return `"content":"${c.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`
+  })
+  try { return JSON.parse(cleaned) } catch {}
+
+  // 尝试 3：单引号 + 缺引号 key 修复
+  cleaned = cleaned.replace(/'/g, '"')
+  cleaned = cleaned.replace(/([{,])\s*(\w+)\s*:/g, '$1"$2":')
+  try { return JSON.parse(cleaned) } catch {}
+
+  // 尝试 4：逐条提取（不依赖完整 JSON）
+  const posts: Omit<Post, 'id'>[] = []
+  const blocks = cleaned.match(/\{[^{}]*"title"[^{}]*"content"[^{}]*"tags"[^{}]*\}/g) || []
+  for (const block of blocks) {
+    const title = block.match(/"title"\s*:\s*"([^"]*)"/)?.[1] || ''
+    const content = block.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/)?.[1] || ''
+    const tagsRaw = block.match(/"tags"\s*:\s*\[([^\]]*)\]/)?.[1] || ''
+    const tags: string[] = []
+    const tagRe = /"([^"]*)"/g
+    let tt
+    while ((tt = tagRe.exec(tagsRaw)) !== null) tags.push(tt[1])
+    if (title && content) posts.push({ title, content, tags })
   }
+  if (posts.length > 0) return posts
+
+  throw new Error('无法解析 AI 返回的 JSON，请重试')
 }
 
 const STYLE_OPTIONS = [
@@ -174,7 +198,8 @@ function App() {
 - 善用emoji，但不能过度
 - 包含具体使用场景和真实感受
 
-请严格按照以下JSON格式输出，不要输出其他内容：
+请严格按照以下JSON格式输出，不要输出其他内容。正文中的双引号必须转义，换行用
+表示：
 [{"title":"标题","content":"正文内容","tags":["标签1","标签2","标签3"]}]`
   }
 
@@ -195,7 +220,7 @@ function App() {
       const body = JSON.stringify({
         model: 'deepseek-chat',
         messages: [
-          { role: 'system', content: '你是一个小红书爆款文案生成助手。只输出JSON，不输出其他内容。' },
+          { role: 'system', content: '你是一个小红书爆款文案生成助手。只输出JSON，不输出其他内容。确保JSON中content字段里的双引号已转义（用\\"），换行符用\\n表示。' },
           { role: 'user', content: buildPrompt() },
         ],
         temperature: 0.9,
