@@ -476,6 +476,13 @@ function App() {
               API 设置
             </button>
           </div>
+          <div className="text-xs text-gray-300">
+            访问人数 <strong className="text-pink-400">{(() => {
+              try { return JSON.parse(localStorage.getItem('xhs_visits') || '{}').total || 0 } catch { return 0 }
+            })()}</strong> · 共生成 <strong className="text-pink-400">{(() => {
+              try { return JSON.parse(localStorage.getItem('xhs_gen') || '{}').total || 0 } catch { return 0 }
+            })()}</strong> 篇文案
+          </div>
           <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs">
             <span>📢 广告/商务合作：</span>
             <span className="font-medium text-gray-500">微信: ZzzzySovo</span>
