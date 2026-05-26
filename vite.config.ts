@@ -4,5 +4,8 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: '/',
+  base: '/xhs-writer-app/',
+  build: {
+    outDir: 'docs',
+  },
 })
