@@ -35,6 +35,24 @@ interface Post {
   tags: string[]
 }
 
+// 鲁棒 JSON 解析：处理 DeepSeek 返回的不规范 JSON（尾随逗号、单引号、截断等）
+function parseJSONPosts(raw: string): Omit<Post, 'id'>[] {
+  let cleaned = raw.replace(/```json\n?/g, '').replace(/```/g, '').trim()
+  // 提取 JSON 数组部分（忽略前后多余文本）
+  const m = cleaned.match(/\[[\s\S]*?\]/)
+  if (m) cleaned = m[0]
+  // 移除尾随逗号（如 },] 或 ],）
+  cleaned = cleaned.replace(/,(\s*[}\]])/g, '$1')
+  try {
+    return JSON.parse(cleaned)
+  } catch {
+    // 更多修复：单引号 -> 双引号，缺引号的 key 补引号
+    cleaned = cleaned.replace(/'/g, '"')
+    cleaned = cleaned.replace(/([{,])\s*(\w+)\s*:/g, '$1"$2":')
+    return JSON.parse(cleaned)
+  }
+}
+
 const STYLE_OPTIONS = [
   { value: 'caozhong', label: '🌱 种草分享风', desc: '亲切自然，像朋友推荐' },
   { value: 'ganhuo', label: '📊 干货测评风', desc: '专业客观，数据说话' },
@@ -181,7 +199,7 @@ function App() {
           { role: 'user', content: buildPrompt() },
         ],
         temperature: 0.9,
-        max_tokens: 2048,
+        max_tokens: 4096,
       })
 
       // 通过代理链调用 DeepSeek API（浏览器端存在 CORS 限制）
@@ -200,13 +218,12 @@ function App() {
       }
 
       const data = await res.json()
-      let parsed: Post[]
+      let parsed: Omit<Post, 'id'>[]
       if (data.posts) {
-        parsed = data.posts
+        parsed = data.posts as Omit<Post, 'id'>[]
       } else {
         const raw = data.choices[0].message.content
-        const cleaned = raw.replace(/```json\n?/g, '').replace(/```/g, '').trim()
-        parsed = JSON.parse(cleaned)
+        parsed = parseJSONPosts(raw)
       }
 
       setPosts(parsed.map((p, i) => ({ ...p, id: i })))
