@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const DEEPSEEK_URL = 'https://api.deepseek.com/v1/chat/completions'
 const DAILY_LIMIT = 5
@@ -191,10 +191,10 @@ function App() {
   const remaining = Math.max(0, DAILY_LIMIT - dailyCount)
   const [showUpgrade, setShowUpgrade] = useState(false)
 
-  // 首次访问自动弹设置 + 统计
-  useState(() => {
+  // 首次访问统计
+  useEffect(() => {
     addVisitStat()
-  })
+  }, [])
 
   const buildPrompt = () => {
     const styleMap: Record<string, string> = {
@@ -388,10 +388,7 @@ function App() {
             <span className="text-2xl">🔥</span>
             <h1 className="text-xl font-bold text-gray-800">小红书AI文案生成器</h1>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-amber-500 font-medium whitespace-nowrap">
-              剩余 <strong className="text-pink-500">{remaining}</strong>/{DAILY_LIMIT} 次
-            </span>
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setShowSettings(true)}
               className="cursor-pointer rounded-lg p-2 text-gray-400 transition-colors hover:bg-pink-50 hover:text-pink-500"
@@ -410,7 +407,7 @@ function App() {
         {/* ===== 设置弹窗 ===== */}
         {showSettings && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-            <div className="mx-4 w-full max-w-md rounded-2xl border border-pink-100 bg-white p-6 shadow-2xl">
+            <div className="animate-modal mx-4 w-full max-w-md rounded-2xl border border-pink-100 bg-white p-6 shadow-2xl">
               <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-700">⚙️ API 设置</h2>
                 <button
@@ -463,7 +460,7 @@ function App() {
         {/* ===== 升级引导弹窗 ===== */}
         {showUpgrade && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-            <div className="mx-4 w-full max-w-sm rounded-2xl border border-pink-100 bg-white p-6 shadow-2xl text-center">
+            <div className="animate-modal mx-4 w-full max-w-sm rounded-2xl border border-pink-100 bg-white p-6 shadow-2xl text-center">
               <div className="mb-3 text-4xl">👑</div>
               <h2 className="mb-2 text-lg font-semibold text-gray-800">今日免费次数已用尽</h2>
               <p className="mb-1 text-sm text-gray-500">
@@ -560,7 +557,7 @@ function App() {
                 placeholder="如：控油持妆12小时、柔焦毛孔、适合油皮、颜值高"
                 value={features}
                 onChange={(e) => setFeatures(e.target.value)}
-                className={inputCls + ' resize-none'}
+                className={`${inputCls} resize-none`}
               />
             </div>
             <div>
@@ -690,26 +687,33 @@ function App() {
                     )}
 
                     {/* 操作按钮 */}
-                    <div className="flex gap-2">
+                    <div className="flex gap-1.5">
                       <button
                         onClick={() => copyPost(post)}
-                        className="flex-1 cursor-pointer rounded-lg border border-pink-200 py-2 text-sm text-pink-600 transition-all hover:bg-pink-50 active:scale-95"
+                        className="flex-1 cursor-pointer rounded-lg border border-pink-200 py-1.5 text-xs text-pink-600 transition-all hover:bg-pink-50 active:scale-95"
                       >
                         {copiedId === post.id ? '✅ 已复制' : '📋 复制'}
                       </button>
                       <button
                         onClick={() => aiFormat(post)}
                         disabled={formattingId === post.id}
-                        className="flex-1 cursor-pointer rounded-lg border border-purple-200 py-2 text-sm text-purple-600 transition-all hover:bg-purple-50 active:scale-95 disabled:opacity-50"
+                        className="flex-1 cursor-pointer rounded-lg border border-purple-200 py-1.5 text-xs text-purple-600 transition-all hover:bg-purple-50 active:scale-95 disabled:opacity-50"
                       >
-                        {formattingId === post.id ? '⏳ 优化中' : '🎨 AI排版'}
+                        {formattingId === post.id ? '⏳ 优化中' : '🎨 优化'}
                       </button>
                       <button
                         onClick={() => checkSensitiveWords(post)}
-                        className="flex-1 cursor-pointer rounded-lg border border-amber-200 py-2 text-sm text-amber-600 transition-all hover:bg-amber-50 active:scale-95"
+                        className="flex-1 cursor-pointer rounded-lg border border-amber-200 py-1.5 text-xs text-amber-600 transition-all hover:bg-amber-50 active:scale-95"
                       >
-                        🔍 查敏感词
+                        🔍 敏感词
                       </button>
+                    </div>
+                    {/* 社交分享 */}
+                    <div className="mt-1.5 flex items-center justify-center gap-2 text-xs text-gray-400">
+                      <span>分享到</span>
+                      <button onClick={() => { navigator.clipboard.writeText(`${post.title}\n\n${post.content}\n\n${post.tags.join(' ')}\n\n—— 由「小红书AI文案生成器」创作 ${shareUrl}`); setCopiedId(post.id); setTimeout(() => setCopiedId(null), 2000); alert('已复制文案，去微信粘贴发送！') }} className="cursor-pointer text-green-500 hover:text-green-600 transition-colors">💬 微信</button>
+                      <span className="text-gray-300">·</span>
+                      <button onClick={() => { const t = encodeURIComponent(`${post.title}\n\n${post.content}\n\n#小红书文案# #AI工具#\n${shareUrl}`); window.open(`https://service.weibo.com/share/share.php?title=${t}&url=${encodeURIComponent(shareUrl)}`, '_blank') }} className="cursor-pointer text-red-400 hover:text-red-500 transition-colors">📢 微博</button>
                     </div>
                   </div>
                 )
@@ -775,16 +779,12 @@ function App() {
             <span>每日免费 {DAILY_LIMIT} 次</span>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs">
-            <span>📢 广告/商务合作：</span>
-            <span className="font-medium text-gray-500">微信: ZzzzySovo</span>
+            <span>📢 商务合作：</span>
+            <span className="font-medium text-gray-500">微信 ZzzzySovo</span>
             <span className="text-gray-300">|</span>
-            <span>🛒 <a href="https://union.jd.com/" target="_blank" className="text-pink-400 hover:underline">京东好物</a></span>
+            <span>🛒 <a href="https://union.jd.com/" target="_blank" rel="noopener noreferrer" className="text-pink-400 hover:underline">京东联盟</a></span>
             <span className="text-gray-300">|</span>
-            <span>🛒 <a href="https://s.click.taobao.com/OlTZ1Tl" target="_blank" className="text-pink-400 hover:underline">手机支架 ¥17.68</a></span>
-            <span className="text-gray-300">|</span>
-            <span>📚 <a href="https://s.click.taobao.com/t?e=m%3D2%26s%3Dfi8zB1swAsBw4vFB6t2Z2ueEDrYVVa64g3vZOarmkFi53hKxp7mNFl906SyIHsHUT9M7X579b8r0JlhLk0Jl4cw18WEQwTuvF%2FhnFMwfvDzmSxm29wiKVF93alVF4qCKqbxYZVy1v%2BTWqunGLAygI3FzUC1tkZVLiaflJfA6nTGgFd2iucECtf1SarTXhIOTsgIpc1WFZiJNubylQlnZt2xkzRYmczbHBA2W2UBWM%2FW90US8XtsVPoOtdnWN%2BJ514lD2smTG1DvU1Cce0w7gxJ16ZID7dcT7j4MrAUsR31Dl1SxDw1i9uP7nyHmkoZi7UpN9ALTZSr6jIW%2BNqheccMYMXU3NNCg%2F&union_lens=lensId%3APUB%401779790411%400b513950_0dd2_19e63c67511_b090%40026UjcsJN3gEijHzsJIUqeTa%40eyJmbG9vcklkIjo4MDY3NCwiic3BtQiiI6Il9wb3J0YWxfdjJfcGFnZXNfcHJvbW9fZ29vZHNfaW5kZXhfaHRtIiiwiic3JjRmxvb3JJZCI6IjgwNjc0In0ie%3BtkScm%3AselectionPlaza_site_4358_0_0_0_1_177979041110710280197467%3Bscm%3A1007.30148.329090.pub_search-item_b0c0781d-190e-49d7-9013-632b416cd858_" target="_blank" className="text-pink-400 hover:underline">AI写作课程 ¥2</a></span>
-            <span className="text-gray-300">|</span>
-            <span>💊 <a href="https://s.click.taobao.com/t?e=m%3D2%26s%3DhztpAwZGq4hw4vFB6t2Z2ueEDrYVVa64YUrQeSeIhnK53hKxp7mNFl906SyIHsHUPmrhe%2FeGHez0JlhLk0Jl4cw18WEQwTuvF%2FhnFMwfvDzmSxm29wiKVF93alVF4qCKhJiE2weqqaRFVI6Hlqs2%2FghrMZuPHvYZHxfsbtDfsFop%2Fq%2BquMQUN1NnEW1QpY0vMLh2y84Z6f6jbKKPA9GKC%2BpRzaullHjPKb9iXllmZ4E%2BkZHuqvdivXhY1KXLRvFPCDp44iebu2xP7qa1tU3ZgS3jKrSQZrKgRywEOrHj0TZGeuhDKKWOXMYMXU3NNCg%2F&union_lens=lensId%3APUB%401779790812%400b1fea4b_0d29_19e63cc93b5_cffb%40024NZIGWy0BN05wTYP4tnjNE%40eyJmbG9vcklkIjoxMTU2ODMsInNwbUIiiOiiJfcG9ydGFsX3YyX3BhZ2VzX3Byb21vX2dvb2RzX2luZGV4X2h0bSIsInNyY0Zsb29ySWQiiOiiIxMTU2ODMiifQieie%3BtkScm%3Asearch_fuzzy_selectionPlaza_site_4358_0_0_0_1_177979081217810280197467%3Bscm%3A1007.30148.329090.0_0_734bd2ea-432b-4881-adfb-f0b77bdab01b_" target="_blank" className="text-pink-400 hover:underline">祛疤膏 ¥11.40</a></span>
+            <span>📚 <a href="https://s.click.taobao.com/t?e=m%3D2%26s%3Dfi8zB1swAsBw4vFB6t2Z2ueEDrYVVa64g3vZOarmkFi53hKxp7mNFl906SyIHsHUT9M7X579b8r0JlhLk0Jl4cw18WEQwTuvF%2FhnFMwfvDzmSxm29wiKVF93alVF4qCKqbxYZVy1v%2BTWqunGLAygI3FzUC1tkZVLiaflJfA6nTGgFd2iucECtf1SarTXhIOTsgIpc1WFZiJNubylQlnZt2xkzRYmczbHBA2W2UBWM%2FW90US8XtsVPoOtdnWN%2BJ514lD2smTG1DvU1Cce0w7gxJ16ZID7dcT7j4MrAUsR31Dl1SxDw1i9uP7nyHmkoZi7UpN9ALTZSr6jIW%2BNqheccMYMXU3NNCg%2F&union_lens=lensId%3APUB%401779790411%400b513950_0dd2_19e63c67511_b090%40026UjcsJN3gEijHzsJIUqeTa%40eyJmbG9vcklkIjo4MDY3NCwiic3BtQiiI6Il9wb3J0YWxfdjJfcGFnZXNfcHJvbW9fZ29vZHNfaW5kZXhfaHRtIiiwiic3JjRmxvb3JJZCI6IjgwNjc0In0ie%3BtkScm%3AselectionPlaza_site_4358_0_0_0_1_177979041110710280197467%3Bscm%3A1007.30148.329090.pub_search-item_b0c0781d-190e-49d7-9013-632b416cd858_" target="_blank" rel="noopener noreferrer" className="text-pink-400 hover:underline">AI工具推荐</a></span>
           </div>
         </div>
       </footer>
