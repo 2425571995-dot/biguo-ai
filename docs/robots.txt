@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://2425571995-dot.github.io/xhs-app-writer/sitemap.xml

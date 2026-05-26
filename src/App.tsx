@@ -10,6 +10,33 @@ interface Post {
   tags: string[]
 }
 
+const STYLE_OPTIONS = [
+  { value: 'caozhong', label: '🌱 种草分享风', desc: '亲切自然，像朋友推荐' },
+  { value: 'ganhuo', label: '📊 干货测评风', desc: '专业客观，数据说话' },
+  { value: 'tubi', label: '⚠️ 吐槽避雷风', desc: '反向种草，痛点切入' },
+  { value: 'jieduan', label: '✍️ 极简短句风', desc: '短小精悍，快速阅读' },
+]
+
+const TEMPLATES = [
+  { label: '💄 美妆', product: '花西子蜜粉饼', features: '控油持妆12小时、柔焦毛孔、适合油皮', price: '¥149', audience: '油皮/混油皮女生' },
+  { label: '👗 穿搭', product: '高腰阔腿牛仔裤', features: '高腰显瘦、垂感好、百搭不挑人', price: '¥129', audience: '梨形身材女生' },
+  { label: '🍜 美食', product: '自热小火锅', features: '麻辣鲜香、料超足、15分钟即食', price: '¥39.9', audience: '宿舍党/上班族' },
+  { label: '🏠 家居', product: 'ins风护眼台灯', features: '三色温调节、护眼无频闪、高颜值', price: '¥69', audience: '租房党/学生党' },
+]
+
+const SENSITIVE_WORDS = [
+  { word: '最', tip: '极限词，建议替换为"很/非常"' },
+  { word: '第一', tip: '极限词，建议替换为"领先"' },
+  { word: '100%', tip: '绝对化用语，建议修改' },
+  { word: '绝对', tip: '绝对化用语，建议替换' },
+  { word: '超级', tip: '夸大宣传，建议替换' },
+  { word: '正品保证', tip: '保证类用语，建议移除' },
+  { word: '无效退款', tip: '承诺类用语，建议移除' },
+  { word: '假一赔十', tip: '承诺类用语，建议移除' },
+  { word: '微信', tip: '注意平台限流' },
+  { word: 'QQ', tip: '注意平台限流' },
+]
+
 function getDailyCount(): { count: number; date: string } {
   const today = new Date().toISOString().slice(0, 10)
   const saved = localStorage.getItem('xhs_daily')
@@ -64,10 +91,13 @@ function App() {
   const [features, setFeatures] = useState('')
   const [price, setPrice] = useState('')
   const [audience, setAudience] = useState('')
+  const [style, setStyle] = useState('caozhong')
   const [loading, setLoading] = useState(false)
   const [posts, setPosts] = useState<Post[]>([])
   const [copiedId, setCopiedId] = useState<number | null>(null)
   const [verifying, setVerifying] = useState(false)
+  const [formattingId, setFormattingId] = useState<number | null>(null)
+  const [sensitiveResults, setSensitiveResults] = useState<Record<number, { word: string; tip: string }[]>>({})
 
   // 每日次数
   const daily = getDailyCount()
@@ -79,6 +109,31 @@ function App() {
   useState(() => {
     addVisitStat()
   })
+
+  const buildPrompt = () => {
+    const styleMap: Record<string, string> = {
+      caozhong: '种草分享风：语气亲切自然，像朋友真心推荐，突出使用感受和真实场景',
+      ganhuo: '干货测评风：专业客观，有理有据，多维度分析优缺点，用数据说话',
+      tubi: '吐槽避雷风：从痛点/坑点切入，反向安利，容易引发共鸣和讨论',
+      jieduan: '极简短句风：短小精悍，一句话一段，快速传递核心信息，适合碎片阅读',
+    }
+    return `你是小红书爆款文案专家。根据以下产品信息，生成3条小红书风格的种草文案。
+
+产品：${product}
+卖点：${features || '请根据产品名称自行提炼'}
+价格：${price || '未提供'}
+目标人群：${audience || '普通消费者'}
+风格要求：${styleMap[style]}
+
+要求：
+- 每条文案包含：吸睛标题、正文（150-300字）、3-5个话题标签
+- 语气自然亲切，像真实用户分享而非广告
+- 善用emoji，但不能过度
+- 包含具体使用场景和真实感受
+
+请严格按照以下JSON格式输出，不要输出其他内容：
+[{"title":"标题","content":"正文内容","tags":["标签1","标签2","标签3"]}]`
+  }
 
   const generate = async () => {
     if (!product.trim()) return alert('请输入产品名称')
@@ -92,11 +147,12 @@ function App() {
     }
 
     setLoading(true)
+    setSensitiveResults({})
     try {
       let res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product, features, price, audience }),
+        body: JSON.stringify({ product, features, price, audience, style }),
       })
 
       if (!res.ok && res.status === 404) {
@@ -169,23 +225,6 @@ function App() {
     }
   }
 
-  const buildPrompt = () =>
-    `你是小红书爆款文案专家。根据以下产品信息，生成3条小红书风格的种草文案。
-
-产品：${product}
-卖点：${features || '请根据产品名称自行提炼'}
-价格：${price || '未提供'}
-目标人群：${audience || '普通消费者'}
-
-要求：
-- 每条文案包含：吸睛标题、正文（150-300字）、3-5个话题标签
-- 语气自然亲切，像真实用户分享而非广告
-- 善用emoji，但不能过度
-- 包含具体使用场景和真实感受
-
-请严格按照以下JSON格式输出，不要输出其他内容：
-[{"title":"标题","content":"正文内容","tags":["标签1","标签2","标签3"]}]`
-
   const copyPost = (post: Post) => {
     const text = `${post.title}\n\n${post.content}\n\n${post.tags.join(' ')}`
     navigator.clipboard.writeText(text)
@@ -204,6 +243,56 @@ function App() {
     localStorage.setItem('xhs_key', v)
   }
 
+  const useTemplate = (t: typeof TEMPLATES[0]) => {
+    setProduct(t.product)
+    setFeatures(t.features)
+    setPrice(t.price)
+    setAudience(t.audience)
+  }
+
+  const checkSensitiveWords = (post: Post) => {
+    const text = `${post.title} ${post.content} ${post.tags.join(' ')}`
+    const found = SENSITIVE_WORDS.filter(({ word }) => text.includes(word))
+    setSensitiveResults(prev => ({ ...prev, [post.id]: found }))
+  }
+
+  const aiFormat = async (post: Post) => {
+    if (!apiKey.trim()) return alert('请先设置 API Key')
+    setFormattingId(post.id)
+    try {
+      const res = await fetch(DEEPSEEK_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [
+            { role: 'system', content: '你是一个小红书文案优化助手。优化文案使其更生动有吸引力，保留原文标签和核心信息。' },
+            {
+              role: 'user',
+              content: `请优化以下小红书文案，让语言更生动、更有吸引力，保留原意和标签：\n\n标题：${post.title}\n正文：${post.content}\n\n直接输出优化后的标题和正文，用 --- 分隔标题和正文。`,
+            },
+          ],
+          temperature: 0.7,
+          max_tokens: 1024,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error('优化失败')
+      const text = data.choices[0].message.content
+      const parts = text.split('---')
+      const newTitle = parts[0]?.trim() || post.title
+      const newContent = parts[1]?.trim() || post.content
+      setPosts(prev => prev.map(p => (p.id === post.id ? { ...p, title: newTitle, content: newContent } : p)))
+    } catch {
+      alert('AI 排版失败，请重试')
+    } finally {
+      setFormattingId(null)
+    }
+  }
+
   const inputCls =
     'w-full rounded-xl border border-pink-200 bg-white px-4 py-3 text-gray-800 placeholder-gray-400 focus:border-pink-400 focus:ring-2 focus:ring-pink-200 outline-none transition-all'
 
@@ -214,12 +303,12 @@ function App() {
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-2">
             <span className="text-2xl">🔥</span>
-            <h1 className="text-xl font-bold text-gray-800">小红书文案生成器</h1>
+            <h1 className="text-xl font-bold text-gray-800">小红书AI文案生成器</h1>
           </div>
           <div className="flex items-center gap-3">
-            {remaining > 0 && remaining <= 3 && (
-              <span className="text-xs text-amber-500 font-medium">剩余 {remaining} 次</span>
-            )}
+            <span className="text-sm text-amber-500 font-medium whitespace-nowrap">
+              剩余 <strong className="text-pink-500">{remaining}</strong>/{DAILY_LIMIT} 次
+            </span>
             <button
               onClick={() => setShowSettings(true)}
               className="cursor-pointer rounded-lg p-2 text-gray-400 transition-colors hover:bg-pink-50 hover:text-pink-500"
@@ -292,18 +381,30 @@ function App() {
         {showUpgrade && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
             <div className="mx-4 w-full max-w-sm rounded-2xl border border-pink-100 bg-white p-6 shadow-2xl text-center">
-              <div className="mb-3 text-4xl">🚀</div>
+              <div className="mb-3 text-4xl">👑</div>
               <h2 className="mb-2 text-lg font-semibold text-gray-800">今日免费次数已用尽</h2>
               <p className="mb-1 text-sm text-gray-500">
-                每日免费 {DAILY_LIMIT} 次，升级后无限使用。
-              </p>
-              <p className="mb-5 text-sm text-gray-500">
-                更多模板、批量生成、历史记录...
+                每日免费 <strong className="text-pink-500">{DAILY_LIMIT} 次</strong>，升级后解锁全部权益
               </p>
 
-              <div className="mb-4 rounded-xl bg-amber-50 p-4">
-                <p className="text-sm font-medium text-amber-700">联系开发者开通</p>
-                <p className="mt-1 text-sm text-amber-600">微信: ZzzzySovo</p>
+              <div className="my-5 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 p-4 text-left space-y-2">
+                <div className="flex items-center gap-2 text-sm text-gray-700">
+                  <span className="text-green-500">✅</span> 无限生成次数
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-700">
+                  <span className="text-green-500">✅</span> 全部文案风格（种草/测评/避雷/极简）
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-700">
+                  <span className="text-green-500">✅</span> AI 智能排版 + 违禁词检测
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-700">
+                  <span className="text-green-500">✅</span> 历史记录云端同步
+                </div>
+              </div>
+
+              <div className="mb-4 rounded-xl bg-pink-50 p-4">
+                <p className="text-sm font-medium text-pink-700">联系开发者开通会员</p>
+                <p className="mt-1 text-sm text-pink-600">微信: ZzzzySovo</p>
               </div>
 
               <div className="flex gap-2">
@@ -331,6 +432,20 @@ function App() {
           </div>
         )}
 
+        {/* ===== 模板预设 ===== */}
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-sm text-gray-400">⚡ 快速填充：</span>
+          {TEMPLATES.map((t) => (
+            <button
+              key={t.label}
+              onClick={() => useTemplate(t)}
+              className="cursor-pointer rounded-full border border-pink-200 px-3.5 py-1.5 text-sm text-pink-600 transition-all hover:bg-pink-50 hover:border-pink-300 active:scale-95"
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
         {/* ===== 输入表单 ===== */}
         <div className="rounded-2xl border border-pink-100 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-lg font-semibold text-gray-700">📝 产品信息</h2>
@@ -338,7 +453,7 @@ function App() {
             <div>
               <label className="mb-1 block text-sm text-gray-500">产品名称 *</label>
               <input
-                placeholder="如：花西子蜜粉饼"
+                placeholder="如：花西子蜜粉饼、某品牌护肤品"
                 value={product}
                 onChange={(e) => setProduct(e.target.value)}
                 className={inputCls}
@@ -348,7 +463,7 @@ function App() {
             <div>
               <label className="mb-1 block text-sm text-gray-500">价格</label>
               <input
-                placeholder="如：¥199"
+                placeholder="如：¥199 / 均价50元"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 className={inputCls}
@@ -359,7 +474,7 @@ function App() {
               <label className="mb-1 block text-sm text-gray-500">核心卖点</label>
               <textarea
                 rows={2}
-                placeholder="如：控油持妆12小时、柔焦毛孔、适合油皮"
+                placeholder="如：控油持妆12小时、柔焦毛孔、适合油皮、颜值高"
                 value={features}
                 onChange={(e) => setFeatures(e.target.value)}
                 className={inputCls + ' resize-none'}
@@ -368,7 +483,7 @@ function App() {
             <div>
               <label className="mb-1 block text-sm text-gray-500">目标人群</label>
               <input
-                placeholder="如：油皮/混油皮女生"
+                placeholder="如：油皮/混油皮女生、学生党"
                 value={audience}
                 onChange={(e) => setAudience(e.target.value)}
                 className={inputCls}
@@ -377,7 +492,29 @@ function App() {
             </div>
           </div>
 
-          <div className="mt-4 flex items-center gap-3">
+          {/* ===== 风格选择 ===== */}
+          <div className="mt-5">
+            <label className="mb-2 block text-sm text-gray-500">🎨 文案风格</label>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {STYLE_OPTIONS.map((s) => (
+                <button
+                  key={s.value}
+                  onClick={() => setStyle(s.value)}
+                  className={`cursor-pointer rounded-xl border px-3 py-2.5 text-sm transition-all ${
+                    style === s.value
+                      ? 'border-pink-400 bg-pink-50 text-pink-700 shadow-sm'
+                      : 'border-gray-200 text-gray-500 hover:border-pink-200 hover:bg-pink-50/50'
+                  }`}
+                >
+                  <div className="font-medium">{s.label}</div>
+                  <div className="mt-0.5 text-xs opacity-70">{s.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ===== 生成按钮 ===== */}
+          <div className="mt-5 flex items-center gap-3">
             <button
               onClick={generate}
               disabled={loading}
@@ -392,12 +529,15 @@ function App() {
                 '✨ 一键生成文案'
               )}
             </button>
-            {remaining > 0 && (
-              <span className="shrink-0 text-xs text-gray-400">
-                今日剩余 <strong className="text-pink-500">{remaining}</strong> 次
-              </span>
-            )}
+            <span className="shrink-0 text-xs text-gray-400 whitespace-nowrap">
+              剩余 <strong className="text-pink-500">{remaining}</strong> / {DAILY_LIMIT} 次
+            </span>
           </div>
+          {remaining <= 1 && remaining > 0 && (
+            <p className="mt-2 text-xs text-amber-500">
+              💡 每日免费 {DAILY_LIMIT} 次，用完后可重置继续使用或联系微信 ZzzzySovo 开通无限会员
+            </p>
+          )}
         </div>
 
         {/* ===== 广告位 1：表单下方横幅 ===== */}
@@ -425,28 +565,72 @@ function App() {
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
-              {posts.map((post) => (
-                <div
-                  key={post.id}
-                  className="group rounded-2xl border border-pink-100 bg-white p-5 shadow-sm transition-all hover:shadow-md"
-                >
-                  <h3 className="mb-2 font-semibold text-gray-800">{post.title}</h3>
-                  <p className="mb-3 whitespace-pre-wrap text-sm leading-relaxed text-gray-600">{post.content}</p>
-                  <div className="mb-4 flex flex-wrap gap-1">
-                    {post.tags.map((tag, i) => (
-                      <span key={i} className="rounded-full bg-pink-50 px-2.5 py-0.5 text-xs text-pink-500">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                  <button
-                    onClick={() => copyPost(post)}
-                    className="w-full cursor-pointer rounded-lg border border-pink-200 py-2 text-sm text-pink-600 transition-all hover:bg-pink-50 active:scale-95"
+              {posts.map((post) => {
+                const sr = sensitiveResults[post.id]
+                return (
+                  <div
+                    key={post.id}
+                    className="group rounded-2xl border border-pink-100 bg-white p-5 shadow-sm transition-all hover:shadow-md"
                   >
-                    {copiedId === post.id ? '✅ 已复制' : '📋 复制此条'}
-                  </button>
-                </div>
-              ))}
+                    <h3 className="mb-2 font-semibold text-gray-800">{post.title}</h3>
+                    <p className="mb-3 whitespace-pre-wrap text-sm leading-relaxed text-gray-600">{post.content}</p>
+                    <div className="mb-3 flex flex-wrap gap-1">
+                      {post.tags.map((tag, i) => (
+                        <span key={i} className="rounded-full bg-pink-50 px-2.5 py-0.5 text-xs text-pink-500">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* 违禁词检测结果 */}
+                    {sr !== undefined && (
+                      <div
+                        className={`mb-3 rounded-lg p-2.5 text-xs ${
+                          sr.length > 0 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'
+                        }`}
+                      >
+                        {sr.length > 0 ? (
+                          <div>
+                            ⚠️ 发现 {sr.length} 个敏感词：
+                            <div className="mt-1 flex flex-wrap gap-1.5">
+                              {sr.map((f, i) => (
+                                <span key={i} className="inline-block rounded bg-red-100 px-1.5 py-0.5" title={f.tip}>
+                                  {f.word}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          '✅ 未发现敏感词，内容安全'
+                        )}
+                      </div>
+                    )}
+
+                    {/* 操作按钮 */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => copyPost(post)}
+                        className="flex-1 cursor-pointer rounded-lg border border-pink-200 py-2 text-sm text-pink-600 transition-all hover:bg-pink-50 active:scale-95"
+                      >
+                        {copiedId === post.id ? '✅ 已复制' : '📋 复制'}
+                      </button>
+                      <button
+                        onClick={() => aiFormat(post)}
+                        disabled={formattingId === post.id}
+                        className="flex-1 cursor-pointer rounded-lg border border-purple-200 py-2 text-sm text-purple-600 transition-all hover:bg-purple-50 active:scale-95 disabled:opacity-50"
+                      >
+                        {formattingId === post.id ? '⏳ 优化中' : '🎨 AI排版'}
+                      </button>
+                      <button
+                        onClick={() => checkSensitiveWords(post)}
+                        className="flex-1 cursor-pointer rounded-lg border border-amber-200 py-2 text-sm text-amber-600 transition-all hover:bg-amber-50 active:scale-95"
+                      >
+                        🔍 查敏感词
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
@@ -470,18 +654,21 @@ function App() {
       {/* ===== Footer ===== */}
       <footer className="border-t border-pink-100 py-6 text-center text-sm text-gray-400">
         <div className="mx-auto max-w-4xl px-4 space-y-2">
-          <div className="flex flex-wrap items-center justify-center gap-x-4">
-            <span>小红书AI文案生成器 · DeepSeek 驱动</span>
-            <button onClick={() => setShowSettings(true)} className="text-pink-400 hover:underline cursor-pointer">
-              API 设置
-            </button>
-          </div>
-          <div className="text-xs text-gray-300">
-            访问人数 <strong className="text-pink-400">{(() => {
-              try { return JSON.parse(localStorage.getItem('xhs_visits') || '{}').total || 0 } catch { return 0 }
-            })()}</strong> · 共生成 <strong className="text-pink-400">{(() => {
-              try { return JSON.parse(localStorage.getItem('xhs_gen') || '{}').total || 0 } catch { return 0 }
-            })()}</strong> 篇文案
+          <p>🔥 小红书AI文案生成器 · 免费在线 · 无需注册 · AI 驱动</p>
+          <div className="text-xs text-gray-300 space-x-3">
+            <span>
+              访问人数 <strong className="text-pink-400">
+                {(() => { try { return JSON.parse(localStorage.getItem('xhs_visits') || '{}').total || 0 } catch { return 0 } })()}
+              </strong>
+            </span>
+            <span>·</span>
+            <span>
+              共生成 <strong className="text-pink-400">
+                {(() => { try { return JSON.parse(localStorage.getItem('xhs_gen') || '{}').total || 0 } catch { return 0 } })()}
+              </strong> 篇文案
+            </span>
+            <span>·</span>
+            <span>每日免费 {DAILY_LIMIT} 次</span>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs">
             <span>📢 广告/商务合作：</span>
