@@ -482,7 +482,7 @@ function App() {
             <span className="text-gray-300">|</span>
             <span>🛒 <a href="https://union.jd.com/" target="_blank" className="text-pink-400 hover:underline">京东好物</a></span>
             <span className="text-gray-300">|</span>
-            <span>🏪 <a href="https://pub.alimama.com/" target="_blank" className="text-pink-400 hover:underline">淘宝联盟</a></span>
+            <span>🛒 <a href="https://s.click.taobao.com/OlTZ1Tl" target="_blank" className="text-pink-400 hover:underline">手机支架 补光灯 ¥17.68</a></span>
           </div>
         </div>
       </footer>
