@@ -1,9 +1,32 @@
 import { useState } from 'react'
 
 const DEEPSEEK_URL = 'https://api.deepseek.com/v1/chat/completions'
-// CORS 代理：GitHub Pages 无法直连 DeepSeek API
-const CORS_PROXY = 'https://cors-anywhere.com/'
 const DAILY_LIMIT = 5
+
+// CORS 代理链：依次尝试，直到成功
+const CORS_PROXIES = [
+  '', // 直连（DeepSeek 是国内服务，可能直接可用）
+  'https://corsproxy.io/?',
+  'https://api.allorigins.win/raw?url=',
+]
+
+async function fetchWithCORS(url: string, options: RequestInit = {}): Promise<Response> {
+  const errors: string[] = []
+  for (const proxy of CORS_PROXIES) {
+    try {
+      const finalUrl = proxy ? proxy + url : url
+      const res = await fetch(finalUrl, { ...options })
+      if (res.status >= 400 && res.status < 500 && proxy) {
+        return res
+      }
+      return res
+    } catch (e: any) {
+      errors.push(`${proxy || '直连'}: ${e.message}`)
+      continue
+    }
+  }
+  throw new Error(`无法连接到 DeepSeek API（已尝试所有代理）\n${errors.join('\n')}`)
+}
 
 interface Post {
   id: number
@@ -161,9 +184,8 @@ function App() {
         max_tokens: 2048,
       })
 
-      // 通过 cors-anywhere 代理（GitHub Pages 直连会被 CORS 拦截）
-      const url = CORS_PROXY + DEEPSEEK_URL
-      const res = await fetch(url, {
+      // 通过代理链调用 DeepSeek API（浏览器端存在 CORS 限制）
+      const res = await fetchWithCORS(DEEPSEEK_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -203,7 +225,7 @@ function App() {
     if (!apiKey.trim()) return alert('请先输入 API Key')
     setVerifying(true)
     try {
-      const res = await fetch(DEEPSEEK_URL.replace('/chat/completions', '/models'), {
+      const res = await fetchWithCORS(DEEPSEEK_URL.replace('/chat/completions', '/models'), {
         headers: { Authorization: `Bearer ${apiKey}` },
       })
       if (res.ok) {
@@ -212,8 +234,8 @@ function App() {
         const data = await res.json()
         alert('❌ 验证失败: ' + (data.error?.message || 'Key 无效'))
       }
-    } catch {
-      alert('❌ 网络错误，请检查网络连接')
+    } catch (e: any) {
+      alert('❌ ' + (e.message || '验证失败'))
     } finally {
       setVerifying(false)
     }
@@ -254,7 +276,7 @@ function App() {
     if (!apiKey.trim()) return alert('请先设置 API Key')
     setFormattingId(post.id)
     try {
-      const res = await fetch(DEEPSEEK_URL, {
+      const res = await fetchWithCORS(DEEPSEEK_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -280,8 +302,8 @@ function App() {
       const newTitle = parts[0]?.trim() || post.title
       const newContent = parts[1]?.trim() || post.content
       setPosts(prev => prev.map(p => (p.id === post.id ? { ...p, title: newTitle, content: newContent } : p)))
-    } catch {
-      alert('AI 排版失败，请重试')
+    } catch (e: any) {
+      alert('AI 排版失败，请重试: ' + (e.message || ''))
     } finally {
       setFormattingId(null)
     }
