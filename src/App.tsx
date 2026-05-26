@@ -35,45 +35,64 @@ interface Post {
   tags: string[]
 }
 
-// 鲁棒 JSON 解析：处理 DeepSeek 返回的各种不规范 JSON
+// 鲁棒 JSON 解析：手工逐字符提取，容忍 content 中的未转义引号
 function parseJSONPosts(raw: string): Omit<Post, 'id'>[] {
-  // 剥离 markdown 代码块
   let cleaned = raw.replace(/```json\n?/g, '').replace(/```/g, '').trim()
-  // 提取 JSON 数组部分
   const m = cleaned.match(/\[[\s\S]*\]/)
   if (m) cleaned = m[0]
-
-  // 尝试 1：直接解析（尾随逗号修复）
+  // 先试标准 JSON.parse
   cleaned = cleaned.replace(/,(\s*[}\]])/g, '$1')
   try { return JSON.parse(cleaned) } catch {}
+  // 手工提取
+  return extractPostsManually(cleaned)
+}
 
-  // 尝试 2：修复字符串值中的未转义引号和换行
-  // 找到所有 content 字段的值，对其中的 " 和 \n 进行转义
-  cleaned = cleaned.replace(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/gs, (_, c) => {
-    return `"content":"${c.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`
-  })
-  try { return JSON.parse(cleaned) } catch {}
-
-  // 尝试 3：单引号 + 缺引号 key 修复
-  cleaned = cleaned.replace(/'/g, '"')
-  cleaned = cleaned.replace(/([{,])\s*(\w+)\s*:/g, '$1"$2":')
-  try { return JSON.parse(cleaned) } catch {}
-
-  // 尝试 4：逐条提取（不依赖完整 JSON）
+function extractPostsManually(text: string): Omit<Post, 'id'>[] {
   const posts: Omit<Post, 'id'>[] = []
-  const blocks = cleaned.match(/\{[^{}]*"title"[^{}]*"content"[^{}]*"tags"[^{}]*\}/g) || []
-  for (const block of blocks) {
-    const title = block.match(/"title"\s*:\s*"([^"]*)"/)?.[1] || ''
-    const content = block.match(/"content"\s*:\s*"((?:[^"\\]|\\.)*)"/)?.[1] || ''
-    const tagsRaw = block.match(/"tags"\s*:\s*\[([^\]]*)\]/)?.[1] || ''
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] !== '{') continue
+    let depth = 1, j = i + 1
+    while (j < text.length && depth > 0) {
+      if (text[j] === '{') depth++
+      else if (text[j] === '}') depth--
+      if (depth > 0) j++
+    }
+    const block = text.slice(i, j + 1)
+    i = j
+
+    // 提取 title
+    const tMatch = block.match(/"title"\s*:\s*"((?:[^"\\]|\\.)*)"/)
+    if (!tMatch) continue
+    const title = tMatch[1]
+
+    // 提取 content：找到 "content":" 后，逐字符定位结尾
+    const cStart = block.match(/"content"\s*:\s*"/)
+    if (!cStart || cStart.index === undefined) continue
+    let pos = cStart.index + cStart[0].length
+    let content = '', inEsc = false
+    while (pos < block.length) {
+      const ch = block[pos]
+      if (inEsc) { content += ch; inEsc = false; pos++; continue }
+      if (ch === '\\') { content += ch; inEsc = true; pos++; continue }
+      if (ch === '"') {
+        if (/^\s*,\s*"tags"/.test(block.slice(pos + 1, pos + 20))) { pos++; break }
+        content += ch; pos++; continue
+      }
+      content += ch; pos++
+    }
+
+    // 提取 tags
+    const tagsRaw = block.match(/"tags"\s*:\s*\[([^\]]*)\]/)
     const tags: string[] = []
-    const tagRe = /"([^"]*)"/g
-    let tt
-    while ((tt = tagRe.exec(tagsRaw)) !== null) tags.push(tt[1])
-    if (title && content) posts.push({ title, content, tags })
+    if (tagsRaw) {
+      const re = /"([^"]*)"/g
+      let t
+      while ((t = re.exec(tagsRaw[1])) !== null) tags.push(t[1])
+    }
+
+    if (title && content.trim()) posts.push({ title, content, tags })
   }
   if (posts.length > 0) return posts
-
   throw new Error('无法解析 AI 返回的 JSON，请重试')
 }
 
@@ -198,8 +217,7 @@ function App() {
 - 善用emoji，但不能过度
 - 包含具体使用场景和真实感受
 
-请严格按照以下JSON格式输出，不要输出其他内容。正文中的双引号必须转义，换行用
-表示：
+请严格按照以下JSON格式输出，不要输出其他内容。正文中的双引号必须转义，换行用\n表示：
 [{"title":"标题","content":"正文内容","tags":["标签1","标签2","标签3"]}]`
   }
 
@@ -227,7 +245,6 @@ function App() {
         max_tokens: 4096,
       })
 
-      // 通过代理链调用 DeepSeek API（浏览器端存在 CORS 限制）
       const res = await fetchWithCORS(DEEPSEEK_URL, {
         method: 'POST',
         headers: {
