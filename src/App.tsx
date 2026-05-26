@@ -135,13 +135,13 @@ function App() {
 [{"title":"标题","content":"正文内容","tags":["标签1","标签2","标签3"]}]`
   }
 
-  const generate = async () => {
+  const generate = async (force = false) => {
     if (!product.trim()) return alert('请输入产品名称')
     if (!apiKey.trim()) {
       setShowSettings(true)
       return alert('请先设置 DeepSeek API Key')
     }
-    if (remaining <= 0) {
+    if (remaining <= 0 && !force) {
       setShowUpgrade(true)
       return
     }
@@ -409,10 +409,10 @@ function App() {
 
               <div className="flex gap-2">
                 <button
-                  onClick={() => setShowUpgrade(false)}
-                  className="flex-1 cursor-pointer rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-500 transition-colors hover:bg-gray-50"
+                  onClick={() => { setShowUpgrade(false); generate(true) }}
+                  className="flex-1 cursor-pointer rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-pink-600 transition-colors hover:bg-pink-50"
                 >
-                  继续使用
+                  继续生成
                 </button>
                 <button
                   onClick={() => {
@@ -516,7 +516,7 @@ function App() {
           {/* ===== 生成按钮 ===== */}
           <div className="mt-5 flex items-center gap-3">
             <button
-              onClick={generate}
+              onClick={() => generate()}
               disabled={loading}
               className="flex-1 cursor-pointer rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 py-3.5 text-lg font-semibold text-white shadow-lg shadow-pink-200 transition-all hover:shadow-xl hover:shadow-pink-300 disabled:cursor-not-allowed disabled:opacity-50 active:scale-[0.98]"
             >
