@@ -216,6 +216,27 @@ function App() {
           </button>
         </div>
 
+        {/* ===== 广告位 1：表单下方横幅 ===== */}
+        <div className="mt-6 rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 p-4 text-center">
+          <p className="mb-2 text-xs text-gray-400">— 广告 —</p>
+          {/* 🔧 Google AdSense：替换下方 data-ad-client 和 data-ad-slot 为你的代码 */}
+          {/*
+          <ins className="adsbygoogle"
+            style="display:block"
+            data-ad-client="ca-pub-XXXXXXXXXXXX"
+            data-ad-slot="1234567890"
+            data-ad-format="auto"
+            data-full-width-responsive="true"></ins>
+          <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+          */}
+          <div className="mx-auto flex min-h-[90px] items-center justify-center rounded-xl bg-white">
+            <div className="text-center">
+              <span className="text-sm text-gray-300">📢 广告位招租</span>
+              <p className="mt-1 text-xs text-gray-300">联系微信：你的微信号</p>
+            </div>
+          </div>
+        </div>
+
         {posts.length > 0 && (
           <div className="mt-8">
             <div className="mb-4 flex items-center justify-between">
@@ -256,11 +277,36 @@ function App() {
         )}
       </main>
 
+      {/* ===== 广告位 2：结果区下方横幅 ===== */}
+      {posts.length > 0 && (
+        <div className="mt-6 rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 p-4 text-center">
+          <p className="mb-2 text-xs text-gray-400">— 广告 —</p>
+          <div className="mx-auto flex min-h-[90px] items-center justify-center rounded-xl bg-white">
+            <div className="text-center">
+              <span className="text-sm text-gray-300">📢 广告位招租</span>
+              <p className="mt-1 text-xs text-gray-300">合作微信：你的微信号</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <footer className="border-t border-pink-100 py-6 text-center text-sm text-gray-400">
-        小红书AI文案生成器 · DeepSeek 驱动 ·
-        <button onClick={() => setShowKeyInput(!showKeyInput)} className="ml-1 text-pink-400 hover:underline cursor-pointer">
-          {showKeyInput ? '收起设置' : 'API 设置'}
-        </button>
+        <div className="mx-auto max-w-4xl px-4 space-y-2">
+          <div className="flex flex-wrap items-center justify-center gap-x-4">
+            <span>小红书AI文案生成器 · DeepSeek 驱动</span>
+            <button onClick={() => setShowKeyInput(!showKeyInput)} className="text-pink-400 hover:underline cursor-pointer">
+              {showKeyInput ? '收起设置' : 'API 设置'}
+            </button>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs">
+            <span>📢 广告/商务合作：</span>
+            <span className="font-medium text-gray-500">微信: zhao_yishuang</span>
+            <span className="text-gray-300">|</span>
+            <span>🛒 <a href="https://union.jd.com/" target="_blank" className="text-pink-400 hover:underline">京东好物</a></span>
+            <span className="text-gray-300">|</span>
+            <span>🏪 <a href="https://pub.alimama.com/" target="_blank" className="text-pink-400 hover:underline">淘宝联盟</a></span>
+          </div>
+        </div>
       </footer>
     </div>
   )
