@@ -108,6 +108,17 @@ const TEMPLATES = [
   { label: '👗 穿搭', product: '高腰阔腿牛仔裤', features: '高腰显瘦、垂感好、百搭不挑人', price: '¥129', audience: '梨形身材女生' },
   { label: '🍜 美食', product: '自热小火锅', features: '麻辣鲜香、料超足、15分钟即食', price: '¥39.9', audience: '宿舍党/上班族' },
   { label: '🏠 家居', product: 'ins风护眼台灯', features: '三色温调节、护眼无频闪、高颜值', price: '¥69', audience: '租房党/学生党' },
+  { label: '📱 数码科技', product: '无线蓝牙耳机', features: '降噪强、续航24h、高清音质', price: '¥199', audience: '学生党/上班族' },
+  { label: '📚 书籍学习', product: '心理学畅销书', features: '通俗易懂、案例丰富、实用性强', price: '¥49', audience: '自我提升人群' },
+  { label: '🚗 汽车用品', product: '车载手机支架', features: '稳固不晃动、单手取放、适配所有车型', price: '¥59', audience: '有车一族' },
+  { label: '👶 母婴亲子', product: '婴儿恒温睡袋', features: '恒温透气、无荧光剂、四季通用', price: '¥129', audience: '宝妈/孕妈' },
+  { label: '🐱 宠物用品', product: '天然无谷猫粮', features: '0谷物、高肉含量、美毛护肠', price: '¥89', audience: '养猫人群' },
+  { label: '💪 运动健身', product: '瑜伽垫加厚款', features: '10mm加厚、防滑纹理、无味环保', price: '¥79', audience: '健身爱好者' },
+]
+
+const AUDIENCE_TAGS = [
+  '女生', '男生', '学生党', '上班族', '宝妈', '精致白领',
+  '油皮', '干皮', '敏感肌', '混油皮', '预算有限', '追求品质',
 ]
 
 const SENSITIVE_WORDS = [
@@ -177,6 +188,12 @@ function App() {
   const [features, setFeatures] = useState('')
   const [price, setPrice] = useState('')
   const [audience, setAudience] = useState('')
+  const [audienceTags, setAudienceTags] = useState<string[]>([])
+  const toggleAudienceTag = (tag: string) => {
+    setAudienceTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    )
+  }
   const [style, setStyle] = useState('caozhong')
   const [loading, setLoading] = useState(false)
   const [posts, setPosts] = useState<Post[]>([])
@@ -203,12 +220,13 @@ function App() {
       tubi: '吐槽避雷风：从痛点/坑点切入，反向安利，容易引发共鸣和讨论',
       jieduan: '极简短句风：短小精悍，一句话一段，快速传递核心信息，适合碎片阅读',
     }
+    const audienceText = audienceTags.length > 0 ? audienceTags.join('、') : (audience || '普通消费者')
     return `你是小红书爆款文案专家。根据以下产品信息，生成3条小红书风格的种草文案。
 
 产品：${product}
 卖点：${features || '请根据产品名称自行提炼'}
 价格：${price || '未提供'}
-目标人群：${audience || '普通消费者'}
+目标人群：${audienceText}
 风格要求：${styleMap[style]}
 
 要求：
@@ -388,7 +406,13 @@ function App() {
             <span className="text-2xl">🔥</span>
             <h1 className="text-xl font-bold text-gray-800">小红书AI文案生成器</h1>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-3">
+            {/* 额度徽章 */}
+            <span className={`rounded-full px-3 py-1 text-xs font-medium ${
+              remaining > 2 ? 'bg-green-50 text-green-600' : remaining > 0 ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'
+            }`}>
+              ⚡ 今日剩余 <strong>{remaining}</strong>/{DAILY_LIMIT}
+            </span>
             <button
               onClick={() => setShowSettings(true)}
               className="cursor-pointer rounded-lg p-2 text-gray-400 transition-colors hover:bg-pink-50 hover:text-pink-500"
@@ -423,6 +447,15 @@ function App() {
               <p className="mb-3 text-sm text-gray-500">
                 输入你的 DeepSeek API Key 即可开始使用。密钥仅保存在你浏览器本地。
               </p>
+              <div className="mb-3 rounded-xl bg-gradient-to-r from-pink-50 to-rose-50 p-3 text-left">
+                <p className="text-xs font-medium text-pink-700 mb-1">📋 如何免费获取 API Key？</p>
+                <ol className="text-xs text-gray-500 space-y-0.5 list-decimal list-inside">
+                  <li>点击下方「免费获取」按钮，前往 DeepSeek 官网</li>
+                  <li>注册/登录后，进入「API Keys」页面</li>
+                  <li>点击「创建 API Key」，复制以 sk- 开头的密钥</li>
+                  <li>新用户送 500 万 tokens（足够生成数千条文案）</li>
+                </ol>
+              </div>
 
               <input
                 type="password"
@@ -561,14 +594,28 @@ function App() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm text-gray-500">目标人群</label>
-              <input
-                placeholder="如：油皮/混油皮女生、学生党"
-                value={audience}
-                onChange={(e) => setAudience(e.target.value)}
-                className={inputCls}
-                onKeyDown={(e) => e.key === 'Enter' && generate()}
-              />
+              <label className="mb-1 block text-sm text-gray-500">目标人群（点击选择）</label>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {AUDIENCE_TAGS.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => toggleAudienceTag(t)}
+                    className={`cursor-pointer rounded-full px-3 py-1 text-xs transition-all ${
+                      audienceTags.includes(t)
+                        ? 'bg-pink-500 text-white shadow-sm'
+                        : 'border border-pink-200 text-pink-600 hover:bg-pink-50'
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+              {audienceTags.length > 0 && (
+                <div className="text-xs text-gray-400">
+                  已选：{audienceTags.join('、')}
+                </div>
+              )}
             </div>
           </div>
 
@@ -609,9 +656,6 @@ function App() {
                 '✨ 一键生成文案'
               )}
             </button>
-            <span className="shrink-0 text-xs text-gray-400 whitespace-nowrap">
-              剩余 <strong className="text-pink-500">{remaining}</strong> / {DAILY_LIMIT} 次
-            </span>
           </div>
           {remaining <= 1 && remaining > 0 && (
             <p className="mt-2 text-xs text-amber-500">
@@ -620,13 +664,39 @@ function App() {
           )}
         </div>
 
-        {/* ===== 广告位 1：表单下方横幅 ===== */}
-        <div className="mt-8 rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 p-4 text-center">
-          <p className="mb-2 text-xs text-gray-400">— 广告 —</p>
-          <div className="mx-auto flex min-h-[90px] items-center justify-center rounded-xl bg-white">
-            <div className="text-center">
-              <span className="text-sm text-gray-300">📢 广告位招租</span>
-              <p className="mt-1 text-xs text-gray-300">联系微信：ZzzzySovo</p>
+        {/* ===== 示例效果展示 ===== */}
+        <div className="mt-8 rounded-2xl border border-pink-100 bg-gradient-to-br from-pink-50 to-rose-50 p-5">
+          <h3 className="mb-3 text-base font-semibold text-gray-700">✨ 生成效果预览</h3>
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-xl border border-pink-100 bg-white p-4 text-left shadow-sm">
+              <div className="mb-1 text-sm font-bold text-gray-800">🌸 混油皮亲妈！！这个蜜粉饼我哭了</div>
+              <div className="text-xs leading-relaxed text-gray-500 line-clamp-3">
+                真的后悔没早点买！！油皮夏天最怕脱妆，这个持妆12小时完全没问题...
+              </div>
+              <div className="mt-2 flex gap-1 flex-wrap">
+                <span className="rounded-full bg-pink-50 px-2 py-0.5 text-[10px] text-pink-500">#小红书文案</span>
+                <span className="rounded-full bg-pink-50 px-2 py-0.5 text-[10px] text-pink-500">#美妆种草</span>
+              </div>
+            </div>
+            <div className="rounded-xl border border-pink-100 bg-white p-4 text-left shadow-sm">
+              <div className="mb-1 text-sm font-bold text-gray-800">⚠️ 避雷！这牛仔裤我穿了三天就...</div>
+              <div className="text-xs leading-relaxed text-gray-500 line-clamp-3">
+                本来满怀期待买的，结果垂感完全不是描述的那样，洗了一次直接...
+              </div>
+              <div className="mt-2 flex gap-1 flex-wrap">
+                <span className="rounded-full bg-pink-50 px-2 py-0.5 text-[10px] text-pink-500">#穿搭避雷</span>
+                <span className="rounded-full bg-pink-50 px-2 py-0.5 text-[10px] text-pink-500">#真实测评</span>
+              </div>
+            </div>
+            <div className="rounded-xl border border-pink-100 bg-white p-4 text-left shadow-sm">
+              <div className="mb-1 text-sm font-bold text-gray-800">📚 这本书改变了我的思维方式</div>
+              <div className="text-xs leading-relaxed text-gray-500 line-clamp-3">
+                真的很干货！每个章节都有实际案例，读完感觉整个人都通透了...
+              </div>
+              <div className="mt-2 flex gap-1 flex-wrap">
+                <span className="rounded-full bg-pink-50 px-2 py-0.5 text-[10px] text-pink-500">#书籍推荐</span>
+                <span className="rounded-full bg-pink-50 px-2 py-0.5 text-[10px] text-pink-500">#自我提升</span>
+              </div>
             </div>
           </div>
         </div>
@@ -763,28 +833,15 @@ function App() {
       <footer className="border-t border-pink-100 py-6 text-center text-sm text-gray-400">
         <div className="mx-auto max-w-4xl px-4 space-y-2">
           <p>🔥 小红书AI文案生成器 · 免费在线 · 无需注册 · AI 驱动</p>
-          <div className="text-xs text-gray-300 space-x-3">
-            <span>
-              访问人数 <strong className="text-pink-400">
-                {(() => { try { return JSON.parse(localStorage.getItem('xhs_visits') || '{}').total || 0 } catch { return 0 } })()}
-              </strong>
-            </span>
-            <span>·</span>
-            <span>
-              共生成 <strong className="text-pink-400">
-                {(() => { try { return JSON.parse(localStorage.getItem('xhs_gen') || '{}').total || 0 } catch { return 0 } })()}
-              </strong> 篇文案
-            </span>
+          <div className="text-xs text-gray-400 space-x-3">
+            <span>已帮助 <strong className="text-pink-400">
+              {(() => { try { return JSON.parse(localStorage.getItem('xhs_gen') || '{}').total || 0 } catch { return 0 } })()}
+            </strong> 位创作者生成文案</span>
             <span>·</span>
             <span>每日免费 {DAILY_LIMIT} 次</span>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs">
-            <span>📢 商务合作：</span>
-            <span className="font-medium text-gray-500">微信 ZzzzySovo</span>
-            <span className="text-gray-300">|</span>
-            <span>🛒 <a href="https://union.jd.com/" target="_blank" rel="noopener noreferrer" className="text-pink-400 hover:underline">京东联盟</a></span>
-            <span className="text-gray-300">|</span>
-            <span>📚 <a href="https://s.click.taobao.com/t?e=m%3D2%26s%3Dfi8zB1swAsBw4vFB6t2Z2ueEDrYVVa64g3vZOarmkFi53hKxp7mNFl906SyIHsHUT9M7X579b8r0JlhLk0Jl4cw18WEQwTuvF%2FhnFMwfvDzmSxm29wiKVF93alVF4qCKqbxYZVy1v%2BTWqunGLAygI3FzUC1tkZVLiaflJfA6nTGgFd2iucECtf1SarTXhIOTsgIpc1WFZiJNubylQlnZt2xkzRYmczbHBA2W2UBWM%2FW90US8XtsVPoOtdnWN%2BJ514lD2smTG1DvU1Cce0w7gxJ16ZID7dcT7j4MrAUsR31Dl1SxDw1i9uP7nyHmkoZi7UpN9ALTZSr6jIW%2BNqheccMYMXU3NNCg%2F&union_lens=lensId%3APUB%401779790411%400b513950_0dd2_19e63c67511_b090%40026UjcsJN3gEijHzsJIUqeTa%40eyJmbG9vcklkIjo4MDY3NCwiic3BtQiiI6Il9wb3J0YWxfdjJfcGFnZXNfcHJvbW9fZ29vZHNfaW5kZXhfaHRtIiiwiic3JjRmxvb3JJZCI6IjgwNjc0In0ie%3BtkScm%3AselectionPlaza_site_4358_0_0_0_1_177979041110710280197467%3Bscm%3A1007.30148.329090.pub_search-item_b0c0781d-190e-49d7-9013-632b416cd858_" target="_blank" rel="noopener noreferrer" className="text-pink-400 hover:underline">AI工具推荐</a></span>
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-gray-400">
+            <span>商务合作：微信 ZzzzySovo</span>
           </div>
         </div>
       </footer>
