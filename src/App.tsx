@@ -301,10 +301,18 @@ function App() {
   }
 
   const copyPost = (post: Post) => {
-    const text = `${post.title}\n\n${post.content}\n\n${post.tags.join(' ')}`
+    const text = `${post.title}\n\n${post.content}\n\n${post.tags.join(' ')}\n\n—— 由「小红书AI文案生成器」创作 https://2425571995-dot.github.io/xhs-app-writer/`
     navigator.clipboard.writeText(text)
     setCopiedId(post.id)
     setTimeout(() => setCopiedId(null), 2000)
+  }
+
+  const shareUrl = 'https://2425571995-dot.github.io/xhs-app-writer/'
+  const shareText = '小红书AI文案生成器 - 免费在线种草文案制作工具'
+
+  const copyShareLink = () => {
+    navigator.clipboard.writeText(`${shareText}\n${shareUrl}`)
+    alert('工具链接已复制，分享给朋友吧！')
   }
 
   const copyAll = () => {
@@ -616,7 +624,7 @@ function App() {
         </div>
 
         {/* ===== 广告位 1：表单下方横幅 ===== */}
-        <div className="mt-6 rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 p-4 text-center">
+        <div className="mt-8 rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 p-4 text-center">
           <p className="mb-2 text-xs text-gray-400">— 广告 —</p>
           <div className="mx-auto flex min-h-[90px] items-center justify-center rounded-xl bg-white">
             <div className="text-center">
@@ -628,7 +636,7 @@ function App() {
 
         {/* ===== 生成结果 ===== */}
         {posts.length > 0 && (
-          <div className="mt-8">
+          <div className="mt-10">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-700">📋 生成结果</h2>
               <button
@@ -639,16 +647,16 @@ function App() {
               </button>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
               {posts.map((post) => {
                 const sr = sensitiveResults[post.id]
                 return (
                   <div
                     key={post.id}
-                    className="group rounded-2xl border border-pink-100 bg-white p-5 shadow-sm transition-all hover:shadow-md"
+                    className="group rounded-2xl border border-pink-100 bg-white p-5 shadow-sm transition-all hover:shadow-md flex flex-col"
                   >
                     <h3 className="mb-2 font-semibold text-gray-800">{post.title}</h3>
-                    <p className="mb-3 whitespace-pre-wrap text-sm leading-relaxed text-gray-600">{post.content}</p>
+                    <p className="mb-3 whitespace-pre-wrap text-sm leading-relaxed text-gray-600 flex-1 overflow-y-auto max-h-[300px] pr-1">{post.content}</p>
                     <div className="mb-3 flex flex-wrap gap-1">
                       {post.tags.map((tag, i) => (
                         <span key={i} className="rounded-full bg-pink-50 px-2.5 py-0.5 text-xs text-pink-500">
@@ -709,6 +717,27 @@ function App() {
             </div>
           </div>
         )}
+
+        {/* ===== 邀请好友传播 ===== */}
+        {posts.length > 0 && (
+          <div className="mx-auto max-w-4xl px-4 mb-6 mt-6">
+            <div className="rounded-2xl bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-100 p-5">
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="flex-1 text-center sm:text-left">
+                  <p className="text-sm font-semibold text-pink-700 mb-1">💡 好用就分享给朋友吧！</p>
+                  <p className="text-xs text-gray-500">把这个免费工具分享给做小红书运营的朋友，一起告别文案焦虑~</p>
+                </div>
+                <button
+                  onClick={copyShareLink}
+                  className="cursor-pointer shrink-0 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 px-5 py-2.5 text-sm font-medium text-white shadow-md shadow-pink-200 transition-all hover:shadow-lg active:scale-95"
+                >
+                  📤 复制链接分享
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </main>
 
       {/* ===== 广告位 2：结果区下方 ===== */}
