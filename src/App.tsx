@@ -303,7 +303,7 @@ function App() {
 
               <div className="mb-4 rounded-xl bg-amber-50 p-4">
                 <p className="text-sm font-medium text-amber-700">联系开发者开通</p>
-                <p className="mt-1 text-sm text-amber-600">微信: zhao_yishuang</p>
+                <p className="mt-1 text-sm text-amber-600">微信: ZzzzySovo</p>
               </div>
 
               <div className="flex gap-2">
@@ -406,7 +406,7 @@ function App() {
           <div className="mx-auto flex min-h-[90px] items-center justify-center rounded-xl bg-white">
             <div className="text-center">
               <span className="text-sm text-gray-300">📢 广告位招租</span>
-              <p className="mt-1 text-xs text-gray-300">联系微信：zhao_yishuang</p>
+              <p className="mt-1 text-xs text-gray-300">联系微信：ZzzzySovo</p>
             </div>
           </div>
         </div>
@@ -460,7 +460,7 @@ function App() {
             <div className="mx-auto flex min-h-[90px] items-center justify-center rounded-xl bg-white">
               <div className="text-center">
                 <span className="text-sm text-gray-300">📢 广告位招租</span>
-                <p className="mt-1 text-xs text-gray-300">合作微信：zhao_yishuang</p>
+                <p className="mt-1 text-xs text-gray-300">合作微信：ZzzzySovo</p>
               </div>
             </div>
           </div>
@@ -478,7 +478,7 @@ function App() {
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs">
             <span>📢 广告/商务合作：</span>
-            <span className="font-medium text-gray-500">微信: zhao_yishuang</span>
+            <span className="font-medium text-gray-500">微信: ZzzzySovo</span>
             <span className="text-gray-300">|</span>
             <span>🛒 <a href="https://union.jd.com/" target="_blank" className="text-pink-400 hover:underline">京东好物</a></span>
             <span className="text-gray-300">|</span>
