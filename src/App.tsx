@@ -2,8 +2,7 @@ import { useState } from 'react'
 
 const DEEPSEEK_URL = 'https://api.deepseek.com/v1/chat/completions'
 // CORS 代理：GitHub Pages 无法直连 DeepSeek API
-const CORS_PROXY = 'https://corsproxy.io/?'
-const CORS_PROXY2 = 'https://api.allorigins.win/raw?url='
+const CORS_PROXY = 'https://cors-anywhere.com/'
 const DAILY_LIMIT = 5
 
 interface Post {
@@ -162,57 +161,37 @@ function App() {
         max_tokens: 2048,
       })
 
-      // 依次尝试多个 CORS 代理，哪个能用用哪个
-      const proxies = [
-        '',
-        CORS_PROXY,
-        CORS_PROXY2,
-      ]
-      let lastErr: any
+      // 通过 cors-anywhere 代理（GitHub Pages 直连会被 CORS 拦截）
+      const url = CORS_PROXY + DEEPSEEK_URL
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body,
+      })
 
-      for (const proxy of proxies) {
-        const url = proxy ? proxy + DEEPSEEK_URL : DEEPSEEK_URL
-        try {
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${apiKey}`,
-            },
-            body,
-          })
-
-          if (!res.ok) {
-            const errData = await res.json().catch(() => ({}))
-            throw new Error(errData.error?.message || errData.error || `HTTP ${res.status}`)
-          }
-
-          const data = await res.json()
-          let parsed: Post[]
-          if (data.posts) {
-            parsed = data.posts
-          } else {
-            const raw = data.choices[0].message.content
-            const cleaned = raw.replace(/```json\n?/g, '').replace(/```/g, '').trim()
-            parsed = JSON.parse(cleaned)
-          }
-
-          setPosts(parsed.map((p, i) => ({ ...p, id: i })))
-          const newCount = dailyCount + 1
-          setDailyCount(newCount)
-          saveDailyCount(newCount)
-          addGenStat()
-          return // 成功了直接返回
-        } catch (e: any) {
-          lastErr = e
-          if (proxy === '') {
-            // 直连失败，继续试代理
-            continue
-          }
-        }
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error?.message || errData.error || `HTTP ${res.status}`)
       }
 
-      throw lastErr || new Error('所有连接方式均失败')
+      const data = await res.json()
+      let parsed: Post[]
+      if (data.posts) {
+        parsed = data.posts
+      } else {
+        const raw = data.choices[0].message.content
+        const cleaned = raw.replace(/```json\n?/g, '').replace(/```/g, '').trim()
+        parsed = JSON.parse(cleaned)
+      }
+
+      setPosts(parsed.map((p, i) => ({ ...p, id: i })))
+      const newCount = dailyCount + 1
+      setDailyCount(newCount)
+      saveDailyCount(newCount)
+      addGenStat()
     } catch (e: any) {
       alert('生成失败: ' + e.message)
     } finally {
