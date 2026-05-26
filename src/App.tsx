@@ -1,6 +1,8 @@
 import { useState } from 'react'
 
 const DEEPSEEK_URL = 'https://api.deepseek.com/v1/chat/completions'
+// CORS 代理：GitHub Pages 无法直连 DeepSeek API
+const CORS_PROXY = 'https://corsproxy.io/?'
 const DAILY_LIMIT = 5
 
 interface Post {
@@ -149,33 +151,26 @@ function App() {
     setLoading(true)
     setSensitiveResults({})
     try {
-      let res = await fetch('/api/generate', {
+      // 通过 CORS 代理调用 DeepSeek（GitHub Pages 直连会被浏览器拦截）
+      const res = await fetch(CORS_PROXY + encodeURIComponent(DEEPSEEK_URL), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product, features, price, audience, style }),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [
+            { role: 'system', content: '你是一个小红书爆款文案生成助手。只输出JSON，不输出其他内容。' },
+            {
+              role: 'user',
+              content: buildPrompt(),
+            },
+          ],
+          temperature: 0.9,
+          max_tokens: 2048,
+        }),
       })
-
-      if (!res.ok && res.status === 404) {
-        res = await fetch(DEEPSEEK_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            model: 'deepseek-chat',
-            messages: [
-              { role: 'system', content: '你是一个小红书爆款文案生成助手。只输出JSON，不输出其他内容。' },
-              {
-                role: 'user',
-                content: buildPrompt(),
-              },
-            ],
-            temperature: 0.9,
-            max_tokens: 2048,
-          }),
-        })
-      }
 
       const data = await res.json()
       if (!res.ok) {
