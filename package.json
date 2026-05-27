@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && copy share.html docs\\share.html",
     "preview": "vite preview"
   },
   "devDependencies": {
