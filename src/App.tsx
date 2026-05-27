@@ -401,7 +401,7 @@ function App() {
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50">
       {/* ===== Header ===== */}
       <header className="border-b border-pink-100 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-2">
             <span className="text-2xl">🔥</span>
             <h1 className="text-xl font-bold text-gray-800">小红书AI文案生成器</h1>
@@ -427,7 +427,7 @@ function App() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-4 py-8">
+      <main className="mx-auto max-w-6xl px-4 py-8">
         {/* ===== 设置弹窗 ===== */}
         {showSettings && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
@@ -622,7 +622,7 @@ function App() {
           {/* ===== 风格选择 ===== */}
           <div className="mt-5">
             <label className="mb-2 block text-sm text-gray-500">🎨 文案风格</label>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
               {STYLE_OPTIONS.map((s) => (
                 <button
                   key={s.value}
@@ -667,7 +667,7 @@ function App() {
         {/* ===== 示例效果展示 ===== */}
         <div className="mt-8 rounded-2xl border border-pink-100 bg-gradient-to-br from-pink-50 to-rose-50 p-5">
           <h3 className="mb-3 text-base font-semibold text-gray-700">✨ 生成效果预览</h3>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             <div className="rounded-xl border border-pink-100 bg-white p-4 text-left shadow-sm">
               <div className="mb-1 text-sm font-bold text-gray-800">🌸 混油皮亲妈！！这个蜜粉饼我哭了</div>
               <div className="text-xs leading-relaxed text-gray-500 line-clamp-3">
@@ -714,7 +714,7 @@ function App() {
               </button>
             </div>
 
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {posts.map((post) => {
                 const sr = sensitiveResults[post.id]
                 return (
@@ -794,7 +794,7 @@ function App() {
 
         {/* ===== 邀请好友传播 ===== */}
         {posts.length > 0 && (
-          <div className="mx-auto max-w-4xl px-4 mb-6 mt-6">
+          <div className="mx-auto max-w-6xl px-4 mb-6 mt-6">
             <div className="rounded-2xl bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-100 p-5">
               <div className="flex flex-col sm:flex-row items-center gap-4">
                 <div className="flex-1 text-center sm:text-left">
@@ -816,7 +816,7 @@ function App() {
 
       {/* ===== 广告位 2：结果区下方 ===== */}
       {posts.length > 0 && (
-        <div className="mx-auto max-w-4xl px-4">
+        <div className="mx-auto max-w-6xl px-4">
           <div className="mb-6 rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 p-4 text-center">
             <p className="mb-2 text-xs text-gray-400">— 广告 —</p>
             <div className="mx-auto flex min-h-[90px] items-center justify-center rounded-xl bg-white">
@@ -831,7 +831,7 @@ function App() {
 
       {/* ===== Footer ===== */}
       <footer className="border-t border-pink-100 py-6 text-center text-sm text-gray-400">
-        <div className="mx-auto max-w-4xl px-4 space-y-2">
+        <div className="mx-auto max-w-6xl px-4 space-y-2">
           <p>🔥 小红书AI文案生成器 · 免费在线 · 无需注册 · AI 驱动</p>
           <div className="text-xs text-gray-400 space-x-3">
             <span>已帮助 <strong className="text-pink-400">
