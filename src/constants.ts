@@ -64,3 +64,71 @@ export const STYLE_MAP: Record<string, string> = {
 export const SHARE_URL = 'https://2425571995-dot.github.io/xhs-app-writer/'
 export const SHARE_TEXT = '小红书AI文案生成器 - 免费在线种草文案制作工具'
 export const CONTACT_WECHAT = 'ZzzzySovo'
+
+// ===== 商品推荐（联盟营销） =====
+export interface ProductAd {
+  name: string
+  price: string
+  emoji: string
+  url: string
+  tags: string[] // 匹配关键词
+}
+
+export const PRODUCT_ADS: ProductAd[] = [
+  {
+    name: '手机支架 补光灯',
+    price: '¥17.68',
+    emoji: '🛒',
+    url: 'https://s.click.taobao.com/OlTZ1Tl',
+    tags: ['手机', '支架', '补光', '直播', '拍照', '数码', '自拍'],
+  },
+  {
+    name: 'AI写作课程',
+    price: '¥2',
+    emoji: '📚',
+    url: 'https://s.click.taobao.com/t?e=m%3D2%26s%3Dfi8zB1swAsBw4vFB6t2Z2ueEDrYVVa64g3vZOarmkFi53hKxp7mNFl906SyIHsHUT9M7X579b8r0JlhLk0Jl4cw18WEQwTuvF%2FhnFMwfvDzmSxm29wiKVF93alVF4qCKqbxYZVy1v%2BTWqunGLAygI3FzUC1tkZVLiaflJfA6nTGgFd2iucECtf1SarTXhIOTsgIpc1WFZiJNubylQlnZt2xkzRYmczbHBA2W2UBWM%2FW90US8XtsVPoOtdnWN%2BJ514lD2smTG1DvU1Cce0w7gxJ16ZID7dcT7j4MrAUsR31Dl1SxDw1i9uP7nyHmkoZi7UpN9ALTZSr6jIW%2BNqheccMYMXU3NNCg%2F&union_lens=lensId%3APUB%401779790411%400b513950_0dd2_19e63c67511_b090%40026UjcsJN3gEijHzsJIUqeTa%40eyJmbG9vcklkIjo4MDY3NCwiic3BtQiiI6Il9wb3J0YWxfdjJfcGFnZXNfcHJvbW9fZ29vZHNfaW5kZXhfaHRtIiiwiic3JjRmxvb3JJZCI6IjgwNjc0In0ie%3BtkScm%3AselectionPlaza_site_4358_0_0_0_1_177979041110710280197467%3Bscm%3A1007.30148.329090.pub_search-item_b0c0781d-190e-49d7-9013-632b416cd858_',
+    tags: ['课程', '学习', '写作', 'AI', '书籍', '教育', '提升', '知识'],
+  },
+  {
+    name: '祛疤膏',
+    price: '¥11.40',
+    emoji: '💊',
+    url: 'https://s.click.taobao.com/t?e=m%3D2%26s%3DhztpAwZGq4hw4vFB6t2Z2ueEDrYVVa64YUrQeSeIhnK53hKxp7mNFl906SyIHsHUPmrhe%2FeGHez0JlhLk0Jl4cw18WEQwTuvF%2FhnFMwfvDzmSxm29wiKVF93alVF4qCKhJiE2weqqaRFVI6Hlqs2%2FghrMZuPHvYZHxfsbtDfsFop%2Fq%2BquMQUN1NnEW1QpY0vMLh2y84Z6f6jbKKPA9GKC%2BpRzaullHjPKb9iXllmZ4E%2BkZHuqvdivXhY1KXLRvFPCDp44iebu2xP7qa1tU3ZgS3jKrSQZrKgRywEOrHj0TZGeuhDKKWOXMYMXU3NNCg%2F&union_lens=lensId%3APUB%401779790812%400b1fea4b_0d29_19e63cc93b5_cffb%40024NZIGWy0BN05wTYP4tnjNE%40eyJmbG9vcklkIjoxMTU2ODMsInNwbUIiiOiiJfcG9ydGFsX3YyX3BhZ2VzX3Byb21vX2dvb2RzX2luZGV4X2h0bSIsInNyY0Zsb29ySWQiiOiiIxMTU2ODMiifQieie%3BtkScm%3Asearch_fuzzy_selectionPlaza_site_4358_0_0_0_1_177979081217810280197467%3Bscm%3A1007.30148.329090.0_0_734bd2ea-432b-4881-adfb-f0b77bdab01b_',
+    tags: ['护肤', '美妆', '祛疤', '修复', '疤痕', '肌肤', '敏感肌', '美容'],
+  },
+  {
+    name: '京东好物精选',
+    price: '优惠购',
+    emoji: '🛍️',
+    url: 'https://union.jd.com/',
+    tags: [], // 通用兜底，始终展示
+  },
+]
+
+// ===== 会员套餐 =====
+export const MEMBERSHIP_PLANS = [
+  {
+    id: 'monthly',
+    name: '月卡会员',
+    price: '¥9.9',
+    priceNum: 9.9,
+    desc: '30天无限生成',
+    badge: '人气之选',
+  },
+  {
+    id: 'yearly',
+    name: '年卡会员',
+    price: '¥49.9',
+    priceNum: 49.9,
+    desc: '365天无限生成',
+    badge: '超值',
+  },
+  {
+    id: 'lifetime',
+    name: '永久会员',
+    price: '¥29.9',
+    priceNum: 29.9,
+    desc: '一次购买永久使用',
+    badge: '限时特惠',
+  },
+]

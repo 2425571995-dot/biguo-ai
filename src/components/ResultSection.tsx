@@ -2,7 +2,7 @@ import { forwardRef } from 'react'
 import type { Post, SensitiveWord } from '../types'
 import ResultCard from './ResultCard'
 import SkeletonCard from './SkeletonCard'
-import AdSlot from './AdSlot'
+import ProductRecommend from './ProductRecommend'
 
 interface ResultSectionProps {
   loading: boolean
@@ -10,6 +10,8 @@ interface ResultSectionProps {
   formattingId: number | null
   sensitiveResults: Record<number, SensitiveWord[]>
   showHistory: boolean
+  product: string
+  features: string
   onCopy: (post: Post) => void
   onFormat: (post: Post) => void
   onCheckSensitive: (post: Post) => void
@@ -21,6 +23,7 @@ interface ResultSectionProps {
 
 const ResultSection = forwardRef<HTMLDivElement, ResultSectionProps>(function ResultSection({
   loading, posts, formattingId, sensitiveResults, showHistory,
+  product, features,
   onCopy, onFormat, onCheckSensitive, onShareWechat, onShareWeibo, onCopyAll,
   historyContent,
 }, ref) {
@@ -70,13 +73,14 @@ const ResultSection = forwardRef<HTMLDivElement, ResultSectionProps>(function Re
               />
             ))}
           </div>
-        </>
-      )}
 
-      {posts.length > 0 && (
-        <div className="mt-6">
-          <AdSlot />
-        </div>
+          {/* 商品推荐卡片区 */}
+          {posts.length > 0 && (
+            <div className="mt-6">
+              <ProductRecommend product={product} features={features} />
+            </div>
+          )}
+        </>
       )}
     </div>
   )

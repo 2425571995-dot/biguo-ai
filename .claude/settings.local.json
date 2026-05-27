@@ -9,7 +9,9 @@
       "WebFetch(domain:2425571995-dot.github.io)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" --max-time 15 \"https://2425571995-dot.github.io/xhs-app-writer/\")",
       "Bash(nslookup github.com)",
-      "Bash(curl -sI --max-time 10 \"https://github.com\")"
+      "Bash(curl -sI --max-time 10 \"https://github.com\")",
+      "Bash(curl -v --max-time 15 \"https://github.com\")",
+      "Bash(powershell.exe -Command \"Get-ItemProperty -Path 'HKCU:\\\\Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Internet Settings' | Select-Object ProxyServer, ProxyEnable\")"
     ]
   }
 }

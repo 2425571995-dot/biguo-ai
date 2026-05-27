@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { DEEPSEEK_URL, SENSITIVE_WORDS, SHARE_URL } from './constants'
 import type { Post, SensitiveWord, Template } from './types'
 import { fetchWithCORS, parseJSONPosts, buildPrompt } from './utils/api'
-import { addVisitStat, addGenStat, saveApiKey, getApiKey, getDarkMode, saveDarkMode } from './utils/storage'
+import { addVisitStat, addGenStat, saveApiKey, getApiKey, getDarkMode, saveDarkMode, redeemCode, isMemberActive } from './utils/storage'
 import { useToast } from './hooks/useToast'
 import { useQuota } from './hooks/useQuota'
 import { useHistory } from './hooks/useHistory'
@@ -42,6 +42,7 @@ function App() {
 
   // ===== 历史记录 Tab =====
   const [showHistory, setShowHistory] = useState(false)
+  const [isMember, setIsMember] = useState(() => isMemberActive())
 
   // ===== Hooks =====
   const { toasts, showToast, removeToast } = useToast()
@@ -73,7 +74,7 @@ function App() {
   const generate = async (force = false) => {
     if (!product.trim()) { showToast('请输入产品名称', 'warning'); return }
     if (!apiKey.trim()) { setShowSettings(true); showToast('请先设置 DeepSeek API Key', 'warning'); return }
-    if (remaining <= 0 && !force) { setShowUpgrade(true); return }
+    if (remaining <= 0 && !force && !isMember) { setShowUpgrade(true); return }
 
     setLoading(true); setSensitiveResults({})
     try {
@@ -152,6 +153,15 @@ function App() {
     showToast('🔍 敏感词检测完成')
   }
 
+  const handleActivateCode = (code: string) => {
+    const result = redeemCode(code)
+    showToast(result.message, result.success ? 'success' : 'error')
+    if (result.success) {
+      setIsMember(true)
+      setShowUpgrade(false)
+    }
+  }
+
   const aiFormat = async (post: Post) => {
     if (!apiKey.trim()) { showToast('请先设置 API Key', 'warning'); return }
     setFormattingId(post.id)
@@ -179,11 +189,11 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 transition-colors duration-300">
-      <Header remaining={remaining} dailyLimit={DAILY_LIMIT} dark={dark} onToggleDark={() => setDark(!dark)} onOpenSettings={() => setShowSettings(true)} />
+      <Header remaining={remaining} dailyLimit={DAILY_LIMIT} dark={dark} isMember={isMember} onToggleDark={() => setDark(!dark)} onOpenSettings={() => setShowSettings(true)} />
 
       <main className="mx-auto max-w-[1400px] px-6 py-8">
         {showSettings && <SettingsModal apiKey={apiKey} verifying={verifying} onSaveKey={handleSaveKey} onVerify={verifyKey} onClose={() => setShowSettings(false)} />}
-        {showUpgrade && <UpgradeModal onContinue={() => { setShowUpgrade(false); generate(true) }} onReset={() => { setShowUpgrade(false); resetCount(); showToast('✅ 次数已重置') }} onClose={() => setShowUpgrade(false)} />}
+        {showUpgrade && <UpgradeModal onContinue={() => { setShowUpgrade(false); generate(true) }} onReset={() => { setShowUpgrade(false); resetCount(); showToast('✅ 次数已重置') }} onClose={() => setShowUpgrade(false)} onActivateCode={handleActivateCode} />}
 
         <TemplatePresets onSelect={handleUseTemplate} />
         <InputForm
@@ -215,6 +225,7 @@ function App() {
           ref={resultRef}
           loading={loading} posts={posts} formattingId={formattingId} sensitiveResults={sensitiveResults}
           showHistory={showHistory}
+          product={product} features={features}
           onCopy={copyPost} onFormat={aiFormat} onCheckSensitive={checkSensitiveWords}
           onShareWechat={shareWechat} onShareWeibo={shareWeibo} onCopyAll={copyAll}
           historyContent={<HistoryPanel history={history} onDelete={deleteHistoryItem} onClear={clearAllHistory} onCopyPost={copyPost} />}

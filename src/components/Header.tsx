@@ -2,11 +2,12 @@ interface HeaderProps {
   remaining: number
   dailyLimit: number
   dark: boolean
+  isMember: boolean
   onToggleDark: () => void
   onOpenSettings: () => void
 }
 
-export default function Header({ remaining, dailyLimit, dark, onToggleDark, onOpenSettings }: HeaderProps) {
+export default function Header({ remaining, dailyLimit, dark, isMember, onToggleDark, onOpenSettings }: HeaderProps) {
   const quotaColor = remaining > 2
     ? 'bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400'
     : remaining > 0
@@ -21,9 +22,15 @@ export default function Header({ remaining, dailyLimit, dark, onToggleDark, onOp
           <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">小红书AI文案生成器</h1>
         </div>
         <div className="flex items-center gap-3">
-          <span className={`rounded-full px-3 py-1 text-xs font-medium ${quotaColor}`}>
-            ⚡ 今日剩余 <strong>{remaining}</strong>/{dailyLimit}
-          </span>
+          {isMember ? (
+            <span className="rounded-full bg-gradient-to-r from-amber-100 to-yellow-100 dark:from-amber-900/30 dark:to-yellow-900/30 px-3 py-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+              👑 会员
+            </span>
+          ) : (
+            <span className={`rounded-full px-3 py-1 text-xs font-medium ${quotaColor}`}>
+              ⚡ 今日剩余 <strong>{remaining}</strong>/{dailyLimit}
+            </span>
+          )}
           <button
             onClick={onToggleDark}
             className="cursor-pointer rounded-lg p-2 text-gray-400 dark:text-gray-500 transition-colors hover:bg-pink-50 dark:hover:bg-gray-800 hover:text-pink-500"

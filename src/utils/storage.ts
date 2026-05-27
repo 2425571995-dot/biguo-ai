@@ -107,3 +107,64 @@ export function clearHistory(): HistoryItem[] {
   localStorage.setItem('xhs_history', '[]')
   return []
 }
+
+// ===== 会员状态 =====
+
+export interface MembershipInfo {
+  active: boolean
+  plan: string        // 'monthly' | 'yearly' | 'lifetime'
+  expiresAt: string   // ISO date string, lifetime 为 '9999-12-31'
+  activatedAt: string
+}
+
+export function getMembership(): MembershipInfo | null {
+  try {
+    const raw = localStorage.getItem('xhs_member')
+    if (!raw) return null
+    const info: MembershipInfo = JSON.parse(raw)
+    // 检查是否过期（lifetime 永不过期）
+    if (info.plan === 'lifetime') return info
+    if (new Date(info.expiresAt) > new Date()) return info
+    // 已过期
+    localStorage.removeItem('xhs_member')
+    return null
+  } catch { return null }
+}
+
+export function activateMembership(plan: string): MembershipInfo {
+  const now = new Date()
+  let expiresAt: Date
+  if (plan === 'monthly') expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+  else if (plan === 'yearly') expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000)
+  else expiresAt = new Date('9999-12-31') // lifetime
+
+  const info: MembershipInfo = {
+    active: true,
+    plan,
+    expiresAt: expiresAt.toISOString(),
+    activatedAt: now.toISOString(),
+  }
+  localStorage.setItem('xhs_member', JSON.stringify(info))
+  return info
+}
+
+export function isMemberActive(): boolean {
+  return getMembership()?.active === true
+}
+
+// ===== 卡密（简单的本地校验，格式: XHS-XXXX-XXXX） =====
+
+const VALID_CODES: Record<string, string> = {
+  // 卡密 → 套餐ID映射（你发卡密时在这里添加）
+  // 'XHS-DEMO-TEST': 'lifetime',
+}
+
+export function redeemCode(code: string): { success: boolean; plan?: string; message: string } {
+  const upper = code.toUpperCase()
+  if (VALID_CODES[upper]) {
+    const plan = VALID_CODES[upper]
+    activateMembership(plan)
+    return { success: true, plan, message: `✅ 卡密兑换成功！已开通${plan === 'lifetime' ? '永久' : plan === 'monthly' ? '月卡' : '年卡'}会员` }
+  }
+  return { success: false, message: '❌ 卡密无效，请检查后重试' }
+}
