@@ -10,7 +10,7 @@ export default function TemplatePresets({ onSelect }: TemplatePresetsProps) {
   const [expanded, setExpanded] = useState(false)
 
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-2">
+    <div className="mb-6 flex flex-wrap items-center gap-2">
       <span className="text-sm text-gray-400 dark:text-gray-500">⚡ 快速填充：</span>
       {TEMPLATE_GROUPS.map((group, gi) => {
         if (gi === 0 || expanded) {

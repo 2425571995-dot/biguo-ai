@@ -195,7 +195,7 @@ function App() {
 
         {/* 结果/历史 Tab 切换 */}
         {(posts.length > 0 || history.length > 0) && (
-          <div className="mt-8 flex gap-1 border-b border-gray-200 dark:border-gray-700">
+          <div className="mt-6 flex gap-1 border-b border-gray-200 dark:border-gray-700">
             <button
               onClick={() => setShowHistory(false)}
               className={`px-4 py-2 text-sm font-medium transition-colors cursor-pointer ${!showHistory ? 'text-pink-600 dark:text-pink-400 border-b-2 border-pink-500' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600'}`}

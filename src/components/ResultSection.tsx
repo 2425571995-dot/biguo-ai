@@ -26,7 +26,7 @@ const ResultSection = forwardRef<HTMLDivElement, ResultSectionProps>(function Re
 }, ref) {
   if (loading && posts.length === 0) {
     return (
-      <div className="mt-10">
+      <div className="mt-6">
         <h2 className="mb-4 text-lg font-semibold text-gray-700 dark:text-gray-200">📋 AI 正在生成...</h2>
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           <SkeletonCard />
@@ -40,7 +40,7 @@ const ResultSection = forwardRef<HTMLDivElement, ResultSectionProps>(function Re
   if (posts.length === 0 && !showHistory) return null
 
   return (
-    <div ref={ref} className="mt-10" style={{ scrollMarginTop: '80px' }}>
+    <div ref={ref} className="mt-6" style={{ scrollMarginTop: '80px' }}>
       {showHistory ? (
         historyContent
       ) : (

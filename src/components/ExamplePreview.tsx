@@ -2,7 +2,7 @@ import AdSlot from './AdSlot'
 
 export default function ExamplePreview() {
   return (
-    <div className="mt-8 grid gap-4 lg:grid-cols-[1fr_300px]">
+    <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_300px]">
       <div className="rounded-2xl border border-pink-100 dark:border-gray-700 bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-900/10 dark:to-rose-900/10 p-5">
         <h3 className="mb-3 text-base font-semibold text-gray-700 dark:text-gray-200">✨ 生成效果预览</h3>
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
