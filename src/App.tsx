@@ -664,38 +664,51 @@ function App() {
           )}
         </div>
 
-        {/* ===== 示例效果展示 ===== */}
-        <div className="mt-8 rounded-2xl border border-pink-100 bg-gradient-to-br from-pink-50 to-rose-50 p-5">
-          <h3 className="mb-3 text-base font-semibold text-gray-700">✨ 生成效果预览</h3>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            <div className="rounded-xl border border-pink-100 bg-white p-4 text-left shadow-sm">
-              <div className="mb-1 text-sm font-bold text-gray-800">🌸 混油皮亲妈！！这个蜜粉饼我哭了</div>
-              <div className="text-xs leading-relaxed text-gray-500 line-clamp-3">
-                真的后悔没早点买！！油皮夏天最怕脱妆，这个持妆12小时完全没问题...
+        {/* ===== 示例效果展示 + 广告位 ===== */}
+        <div className="mt-8 grid gap-4 lg:grid-cols-[1fr_300px]">
+          {/* 示例卡片 */}
+          <div className="rounded-2xl border border-pink-100 bg-gradient-to-br from-pink-50 to-rose-50 p-5">
+            <h3 className="mb-3 text-base font-semibold text-gray-700">✨ 生成效果预览</h3>
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              <div className="rounded-xl border border-pink-100 bg-white p-4 text-left shadow-sm">
+                <div className="mb-1 text-sm font-bold text-gray-800">🌸 混油皮亲妈！！这个蜜粉饼我哭了</div>
+                <div className="text-xs leading-relaxed text-gray-500 line-clamp-3">
+                  真的后悔没早点买！！油皮夏天最怕脱妆，这个持妆12小时完全没问题...
+                </div>
+                <div className="mt-2 flex gap-1 flex-wrap">
+                  <span className="rounded-full bg-pink-50 px-2 py-0.5 text-[10px] text-pink-500">#小红书文案</span>
+                  <span className="rounded-full bg-pink-50 px-2 py-0.5 text-[10px] text-pink-500">#美妆种草</span>
+                </div>
               </div>
-              <div className="mt-2 flex gap-1 flex-wrap">
-                <span className="rounded-full bg-pink-50 px-2 py-0.5 text-[10px] text-pink-500">#小红书文案</span>
-                <span className="rounded-full bg-pink-50 px-2 py-0.5 text-[10px] text-pink-500">#美妆种草</span>
+              <div className="rounded-xl border border-pink-100 bg-white p-4 text-left shadow-sm">
+                <div className="mb-1 text-sm font-bold text-gray-800">⚠️ 避雷！这牛仔裤我穿了三天就...</div>
+                <div className="text-xs leading-relaxed text-gray-500 line-clamp-3">
+                  本来满怀期待买的，结果垂感完全不是描述的那样，洗了一次直接...
+                </div>
+                <div className="mt-2 flex gap-1 flex-wrap">
+                  <span className="rounded-full bg-pink-50 px-2 py-0.5 text-[10px] text-pink-500">#穿搭避雷</span>
+                  <span className="rounded-full bg-pink-50 px-2 py-0.5 text-[10px] text-pink-500">#真实测评</span>
+                </div>
+              </div>
+              <div className="rounded-xl border border-pink-100 bg-white p-4 text-left shadow-sm">
+                <div className="mb-1 text-sm font-bold text-gray-800">📚 这本书改变了我的思维方式</div>
+                <div className="text-xs leading-relaxed text-gray-500 line-clamp-3">
+                  真的很干货！每个章节都有实际案例，读完感觉整个人都通透了...
+                </div>
+                <div className="mt-2 flex gap-1 flex-wrap">
+                  <span className="rounded-full bg-pink-50 px-2 py-0.5 text-[10px] text-pink-500">#书籍推荐</span>
+                  <span className="rounded-full bg-pink-50 px-2 py-0.5 text-[10px] text-pink-500">#自我提升</span>
+                </div>
               </div>
             </div>
-            <div className="rounded-xl border border-pink-100 bg-white p-4 text-left shadow-sm">
-              <div className="mb-1 text-sm font-bold text-gray-800">⚠️ 避雷！这牛仔裤我穿了三天就...</div>
-              <div className="text-xs leading-relaxed text-gray-500 line-clamp-3">
-                本来满怀期待买的，结果垂感完全不是描述的那样，洗了一次直接...
-              </div>
-              <div className="mt-2 flex gap-1 flex-wrap">
-                <span className="rounded-full bg-pink-50 px-2 py-0.5 text-[10px] text-pink-500">#穿搭避雷</span>
-                <span className="rounded-full bg-pink-50 px-2 py-0.5 text-[10px] text-pink-500">#真实测评</span>
-              </div>
-            </div>
-            <div className="rounded-xl border border-pink-100 bg-white p-4 text-left shadow-sm">
-              <div className="mb-1 text-sm font-bold text-gray-800">📚 这本书改变了我的思维方式</div>
-              <div className="text-xs leading-relaxed text-gray-500 line-clamp-3">
-                真的很干货！每个章节都有实际案例，读完感觉整个人都通透了...
-              </div>
-              <div className="mt-2 flex gap-1 flex-wrap">
-                <span className="rounded-full bg-pink-50 px-2 py-0.5 text-[10px] text-pink-500">#书籍推荐</span>
-                <span className="rounded-full bg-pink-50 px-2 py-0.5 text-[10px] text-pink-500">#自我提升</span>
+          </div>
+          {/* 广告位 1 */}
+          <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/60 p-4 text-center flex flex-col justify-center">
+            <p className="mb-2 text-xs text-gray-400">— 广告 —</p>
+            <div className="flex min-h-[90px] items-center justify-center rounded-xl bg-white">
+              <div className="text-center">
+                <span className="text-sm text-gray-300">📢 广告位招租</span>
+                <p className="mt-1 text-xs text-gray-300">合作微信：ZzzzySovo</p>
               </div>
             </div>
           </div>
