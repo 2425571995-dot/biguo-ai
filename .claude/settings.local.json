@@ -3,7 +3,11 @@
     "allow": [
       "Bash(git config *)",
       "Bash(git remote *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(ssh -T git@github.com)",
+      "Bash(git checkout *)",
+      "WebFetch(domain:2425571995-dot.github.io)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" --max-time 15 \"https://2425571995-dot.github.io/xhs-app-writer/\")"
     ]
   }
 }
