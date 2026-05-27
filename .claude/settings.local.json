@@ -7,7 +7,9 @@
       "Bash(ssh -T git@github.com)",
       "Bash(git checkout *)",
       "WebFetch(domain:2425571995-dot.github.io)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\" --max-time 15 \"https://2425571995-dot.github.io/xhs-app-writer/\")"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" --max-time 15 \"https://2425571995-dot.github.io/xhs-app-writer/\")",
+      "Bash(nslookup github.com)",
+      "Bash(curl -sI --max-time 10 \"https://github.com\")"
     ]
   }
 }

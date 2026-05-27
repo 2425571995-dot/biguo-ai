@@ -181,7 +181,7 @@ function App() {
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 transition-colors duration-300">
       <Header remaining={remaining} dailyLimit={DAILY_LIMIT} dark={dark} onToggleDark={() => setDark(!dark)} onOpenSettings={() => setShowSettings(true)} />
 
-      <main className="mx-auto px-6 py-8">
+      <main className="mx-auto max-w-[1400px] px-6 py-8">
         {showSettings && <SettingsModal apiKey={apiKey} verifying={verifying} onSaveKey={handleSaveKey} onVerify={verifyKey} onClose={() => setShowSettings(false)} />}
         {showUpgrade && <UpgradeModal onContinue={() => { setShowUpgrade(false); generate(true) }} onReset={() => { setShowUpgrade(false); resetCount(); showToast('✅ 次数已重置') }} onClose={() => setShowUpgrade(false)} />}
 
