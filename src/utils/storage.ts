@@ -152,6 +152,56 @@ export function isMemberActive(): boolean {
   return getMembership()?.active === true
 }
 
+// ===== 分享裂变 =====
+
+export function getShareReferralCode(): string {
+  let code = localStorage.getItem('xhs_ref_code')
+  if (!code) {
+    // 生成6位随机码
+    code = 'REF' + Math.random().toString(36).substring(2, 8).toUpperCase()
+    localStorage.setItem('xhs_ref_code', code)
+  }
+  return code
+}
+
+export function getShareBonus(): number {
+  return parseInt(localStorage.getItem('xhs_share_bonus') || '0')
+}
+
+export function addShareBonus(count: number) {
+  const bonus = getShareBonus() + count
+  localStorage.setItem('xhs_share_bonus', String(bonus))
+}
+
+// 被邀请人访问时调用：如果URL带ref参数，给邀请人+3次
+export function checkReferralBonus() {
+  const params = new URLSearchParams(window.location.search)
+  const ref = params.get('ref')
+  if (ref && ref !== getShareReferralCode()) {
+    // 标记已领取，避免重复
+    const claimed = localStorage.getItem('xhs_ref_claimed')
+    if (claimed !== ref) {
+      addShareBonus(3)
+      localStorage.setItem('xhs_ref_claimed', ref)
+      return true
+    }
+  }
+  return false
+}
+
+export function getTotalRemaining(baseRemaining: number): number {
+  return baseRemaining + getShareBonus()
+}
+
+export function consumeShareBonus(): boolean {
+  const bonus = getShareBonus()
+  if (bonus > 0) {
+    addShareBonus(-1)
+    return true
+  }
+  return false
+}
+
 // ===== 卡密（简单的本地校验，格式: XHS-XXXX-XXXX） =====
 
 const VALID_CODES: Record<string, string> = {

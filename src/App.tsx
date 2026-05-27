@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { DEEPSEEK_URL, SENSITIVE_WORDS, SHARE_URL } from './constants'
 import type { Post, SensitiveWord, Template } from './types'
 import { fetchWithCORS, parseJSONPosts, buildPrompt } from './utils/api'
-import { addVisitStat, addGenStat, saveApiKey, getApiKey, getDarkMode, saveDarkMode, redeemCode, isMemberActive } from './utils/storage'
+import { addVisitStat, addGenStat, saveApiKey, getApiKey, getDarkMode, saveDarkMode, redeemCode, isMemberActive, getShareBonus, checkReferralBonus, consumeShareBonus } from './utils/storage'
 import { useToast } from './hooks/useToast'
 import { useQuota } from './hooks/useQuota'
 import { useHistory } from './hooks/useHistory'
@@ -56,8 +56,16 @@ function App() {
     saveDarkMode(dark)
   }, [dark])
 
-  // ===== 首次访问统计 =====
-  useEffect(() => { addVisitStat() }, [])
+  // ===== 首次访问统计 + 裂变奖励检测 =====
+  const [shareBonus, setShareBonus] = useState(() => getShareBonus())
+  useEffect(() => {
+    addVisitStat()
+    const gotBonus = checkReferralBonus()
+    if (gotBonus) {
+      setShareBonus(getShareBonus())
+      showToast('🎉 通过邀请链接访问，+3次免费额度！', 'success')
+    }
+  }, [])
 
   // ===== 业务方法 =====
   const handleSaveKey = (v: string) => { setApiKey(v); saveApiKey(v) }
@@ -74,7 +82,7 @@ function App() {
   const generate = async (force = false) => {
     if (!product.trim()) { showToast('请输入产品名称', 'warning'); return }
     if (!apiKey.trim()) { setShowSettings(true); showToast('请先设置 DeepSeek API Key', 'warning'); return }
-    if (remaining <= 0 && !force && !isMember) { setShowUpgrade(true); return }
+    if (remaining + shareBonus <= 0 && !force && !isMember) { setShowUpgrade(true); return }
 
     setLoading(true); setSensitiveResults({})
     try {
@@ -100,7 +108,10 @@ function App() {
 
       const newPosts = parsed.map((p, i) => ({ ...p, id: i }))
       setPosts(newPosts)
-      incrementCount(); addGenStat()
+      // 优先消耗赠送次数，再消耗每日额度
+      if (shareBonus > 0) { consumeShareBonus(); setShareBonus(getShareBonus()) }
+      else { incrementCount() }
+      addGenStat()
       addHistoryItem(product, newPosts)
       setShowHistory(false)
 
@@ -189,7 +200,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 transition-colors duration-300">
-      <Header remaining={remaining} dailyLimit={DAILY_LIMIT} dark={dark} isMember={isMember} onToggleDark={() => setDark(!dark)} onOpenSettings={() => setShowSettings(true)} />
+      <Header remaining={remaining + shareBonus} dailyLimit={DAILY_LIMIT} dark={dark} isMember={isMember} onToggleDark={() => setDark(!dark)} onOpenSettings={() => setShowSettings(true)} />
 
       <main className="mx-auto max-w-[1400px] px-6 py-8">
         {showSettings && <SettingsModal apiKey={apiKey} verifying={verifying} onSaveKey={handleSaveKey} onVerify={verifyKey} onClose={() => setShowSettings(false)} />}
@@ -230,7 +241,7 @@ function App() {
           onShareWechat={shareWechat} onShareWeibo={shareWeibo} onCopyAll={copyAll}
           historyContent={<HistoryPanel history={history} onDelete={deleteHistoryItem} onClear={clearAllHistory} onCopyPost={copyPost} />}
         />
-        {posts.length > 0 && !showHistory && <InviteShare onCopyShareLink={copyShareLink} />}
+        {posts.length > 0 && !showHistory && <InviteShare onCopyShareLink={copyShareLink} bonusCount={shareBonus} />}
       </main>
 
       <Footer />

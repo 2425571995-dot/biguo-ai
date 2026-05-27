@@ -61,6 +61,16 @@ export default function ResultCard({
           📋 复制
         </button>
         <button
+          onClick={() => {
+            // 复制纯文案+品牌水印
+            const branded = `${post.title}\n\n${post.content}\n\n${post.tags.map(t => `#${t}`).join(' ')}\n\n— 由小红书AI文案生成器生成 🔗 2425571995-dot.github.io/xhs-app-writer`
+            navigator.clipboard.writeText(branded).catch(() => {})
+          }}
+          className="flex-1 cursor-pointer rounded-lg border border-orange-200 dark:border-orange-800 py-1.5 text-xs text-orange-600 dark:text-orange-400 transition-all hover:bg-orange-50 dark:hover:bg-gray-700 active:scale-95"
+        >
+          🔗 复制+水印
+        </button>
+        <button
           onClick={() => onFormat(post)}
           disabled={formattingId === post.id}
           className="flex-1 cursor-pointer rounded-lg border border-purple-200 dark:border-purple-800 py-1.5 text-xs text-purple-600 dark:text-purple-400 transition-all hover:bg-purple-50 dark:hover:bg-gray-700 active:scale-95 disabled:opacity-50"
