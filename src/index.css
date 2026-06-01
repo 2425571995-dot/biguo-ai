@@ -601,6 +601,111 @@ body {
   font-weight: 700;
 }
 
+/* ========== Review Section Tabs ========== */
+.tabs.review-section {
+  margin-top: -6px;
+  padding-top: 6px;
+  border-top: 2px dashed var(--border);
+}
+
+.tabs-section-label {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+  padding: 6px 10px;
+  background: var(--primary-light);
+  border-radius: 6px;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+
+.tab.review {
+  border-color: #c7d2fe;
+  color: #4338ca;
+}
+
+.tab.review:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.tab.review.active {
+  background: #4338ca;
+  color: white;
+  border-color: #4338ca;
+}
+
+/* ========== Image Upload ========== */
+.image-upload-area {
+  margin-bottom: 12px;
+}
+
+.image-upload-placeholder {
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  padding: 24px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #fafbfc;
+}
+
+.image-upload-placeholder:hover {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.upload-icon {
+  font-size: 32px;
+  margin-bottom: 6px;
+}
+
+.upload-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.upload-hint {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.image-preview-wrapper {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.image-preview {
+  width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+  background: #fafbfc;
+  display: block;
+}
+
+.image-remove-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.image-remove-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
 /* ========== Loading Dots ========== */
 .loading-dots::after {
   content: '';
@@ -642,6 +747,15 @@ body {
   .output-area {
     min-height: 130px;
     font-size: 14px;
+  }
+
+  .image-preview {
+    max-height: 200px;
+  }
+
+  .tabs-section-label {
+    font-size: 11px;
+    padding: 4px 8px;
   }
 
   .btn-primary {
