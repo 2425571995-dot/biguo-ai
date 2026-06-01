@@ -200,6 +200,10 @@ const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
 const STORAGE_KEY_USAGE = 'biguoai_usage'
 const STORAGE_KEY_VIP = 'biguoai_vip'
 const STORAGE_KEY_API = 'biguoai_apikey'
+const STORAGE_KEY_VIP_CODE = 'biguoai_vipcode'
+
+// 默认激活码（你可以随时改这个）
+const DEFAULT_VIP_CODE = 'biguo2026'
 
 // ====== Helpers ======
 function getTodayStr(): string {
@@ -245,6 +249,14 @@ function setSavedApiKey(key: string) {
   localStorage.setItem(STORAGE_KEY_API, key)
 }
 
+function getCurrentVipCode(): string {
+  return localStorage.getItem(STORAGE_KEY_VIP_CODE) || DEFAULT_VIP_CODE
+}
+
+function setCurrentVipCode(code: string) {
+  localStorage.setItem(STORAGE_KEY_VIP_CODE, code)
+}
+
 // ====== Toast Component ======
 function Toast({ msg, type, onDone }: { msg: string; type: 'success' | 'error' | 'warning'; onDone: () => void }) {
   useEffect(() => {
@@ -271,6 +283,9 @@ export default function App() {
   const outputRef = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [showAdmin, setShowAdmin] = useState(false)
+  const [adminCode, setAdminCode] = useState(getCurrentVipCode())
+  const logoClicks = useRef(0)
 
   const currentTab = ALL_TABS.find(t => t.key === tab)!
 
@@ -401,7 +416,7 @@ export default function App() {
   const handleVerifyVip = useCallback(() => {
     const code = verifyCode.trim()
     if (!code) { showToast('请输入验证码', 'warning'); return }
-    if (code.length >= 6) {
+    if (code === getCurrentVipCode()) {
       saveVip(365)
       setVip(true)
       setVerifyCode('')
@@ -430,7 +445,7 @@ export default function App() {
       {/* Header */}
       <header className="header">
         <div className="header-left">
-          <div className="header-logo">毕</div>
+          <div className="header-logo" onClick={() => { logoClicks.current++; if (logoClicks.current >= 5) { setShowAdmin(true); logoClicks.current = 0 } }} style={{ cursor: 'pointer' }}>毕</div>
           <div className="header-title">
             毕过<span>AI</span>
             <span className="header-badge">免费</span>
@@ -706,6 +721,63 @@ export default function App() {
             </button>
             <button className="btn-close-modal" onClick={() => setShowSettings(false)}>
               取消
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Admin Panel (连点5次logo进入) ===== */}
+      {showAdmin && (
+        <div className="modal-overlay" onClick={() => setShowAdmin(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <h3>🔐 管理员后台</h3>
+            <p>配置激活码。有人付款后，给他这个码让他激活。</p>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 6 }}>
+                当前激活码
+              </label>
+              <input
+                className="settings-input"
+                value={adminCode}
+                onChange={e => setAdminCode(e.target.value)}
+                placeholder="输入新的激活码"
+                style={{ fontFamily: 'monospace', fontSize: 18, textAlign: 'center' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="btn-primary"
+                style={{ flex: 1 }}
+                onClick={() => {
+                  const newCode = 'BIGUO-' + Math.random().toString(36).toUpperCase().slice(2, 8)
+                  setAdminCode(newCode)
+                }}
+              >
+                🎲 随机生成
+              </button>
+              <button
+                className="btn-primary"
+                style={{ flex: 1, background: 'linear-gradient(135deg, var(--success), #059669)' }}
+                onClick={() => {
+                  if (adminCode.length < 4) { showToast('激活码至少4位', 'warning'); return }
+                  setCurrentVipCode(adminCode)
+                  setShowAdmin(false)
+                  showToast(`激活码已更新: ${adminCode}`, 'success')
+                }}
+              >
+                💾 保存
+              </button>
+            </div>
+
+            <div style={{ marginTop: 16, padding: '10px 14px', background: '#fef3c7', borderRadius: 8, fontSize: 12, color: '#92400e', lineHeight: 1.5 }}>
+              <strong>⚠️ 每次有人激活后请更换新码</strong><br />
+              操作：点「随机生成」→「保存」→ 把新码发给付款的人
+            </div>
+
+            <button className="btn-close-modal" onClick={() => setShowAdmin(false)}>
+              关闭
             </button>
           </div>
         </div>
