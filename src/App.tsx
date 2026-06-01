@@ -622,21 +622,33 @@ export default function App() {
 
             <div className="qr-area">
               <p>💳 扫码付款后获取验证码</p>
-              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>
-                支付宝 / 微信 扫码支付
+              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>
+                支付宝 / 微信 都可以
               </div>
-              <img
-                src={import.meta.env.BASE_URL + 'qr-pay.png'}
-                alt="收款码"
-                style={{ width: 180, height: 180, objectFit: 'contain', borderRadius: 8, margin: '0 auto', display: 'block' }}
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none'
-                  const fallback = document.createElement('div')
-                  fallback.innerHTML = '<div style="font-size:32px;margin-bottom:4px">📱</div><div>放你的收款码</div>'
-                  fallback.style.cssText = 'width:180px;height:180px;margin:0 auto;background:#f0f0f0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#94a3b8;border:1px solid #e2e8f0;flex-direction:column'
-                  e.currentTarget.parentNode?.appendChild(fallback)
-                }}
-              />
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+                <div>
+                  <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4, textAlign: 'center' }}>支付宝</div>
+                  <img
+                    src={import.meta.env.BASE_URL + 'qr-alipay.png'}
+                    alt="支付宝收款码"
+                    style={{ width: 140, height: 140, objectFit: 'contain', borderRadius: 8, display: 'block', border: '1px solid #e2e8f0' }}
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4, textAlign: 'center' }}>微信</div>
+                  <img
+                    src={import.meta.env.BASE_URL + 'qr-wechat.png'}
+                    alt="微信收款码"
+                    style={{ width: 140, height: 140, objectFit: 'contain', borderRadius: 8, display: 'block', border: '1px solid #e2e8f0' }}
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none'
+                    }}
+                  />
+                </div>
+              </div>
               <div className="qr-tip">
                 ⚡ 付款后把「交易单号后6位」粘贴到下面输入框激活
               </div>
