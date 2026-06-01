@@ -636,6 +636,7 @@ export default function App() {
       {/* Footer */}
       <div className="footer">
         <p>毕过AI · 论文写作助手 — 免费！觉得好用请我喝杯奶茶 ☕</p>
+        <p style={{ marginTop: 4, color: '#94a3b8' }}>访客 <span id="busuanzi_value_site_pv"></span> 次</p>
       </div>
 
       {/* ===== Payment Modal ===== */}
