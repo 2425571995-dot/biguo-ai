@@ -625,18 +625,18 @@ export default function App() {
               <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>
                 支付宝 / 微信 扫码支付
               </div>
-              <div
-                style={{
-                  width: 180, height: 180, margin: '0 auto', background: '#f0f0f0',
-                  borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 14, color: '#94a3b8', border: '1px solid #e2e8f0',
+              <img
+                src={import.meta.env.BASE_URL + 'qr-pay.png'}
+                alt="收款码"
+                style={{ width: 180, height: 180, objectFit: 'contain', borderRadius: 8, margin: '0 auto', display: 'block' }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                  const fallback = document.createElement('div')
+                  fallback.innerHTML = '<div style="font-size:32px;margin-bottom:4px">📱</div><div>放你的收款码</div>'
+                  fallback.style.cssText = 'width:180px;height:180px;margin:0 auto;background:#f0f0f0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#94a3b8;border:1px solid #e2e8f0;flex-direction:column'
+                  e.currentTarget.parentNode?.appendChild(fallback)
                 }}
-              >
-                <div>
-                  <div style={{ fontSize: 32, marginBottom: 4 }}>📱</div>
-                  放你的收款码
-                </div>
-              </div>
+              />
               <div className="qr-tip">
                 ⚡ 付款后把「交易单号后6位」粘贴到下面输入框激活
               </div>
