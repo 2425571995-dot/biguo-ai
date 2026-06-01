@@ -193,11 +193,12 @@ const ALL_TABS = [...CORE_TABS, ...REVIEW_TABS]
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://shiyunapi.com/v1'
 const DEFAULT_API_KEY = import.meta.env.VITE_API_KEY || ''
 const MODEL = import.meta.env.VITE_MODEL || 'gpt-4o'
-const FREE_DAILY_LIMIT = 3
+const FREE_DAILY_LIMIT = 5
 const FREE_CHAR_LIMIT = 800
 const VIP_CHAR_LIMIT = 5000
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
 const STORAGE_KEY_USAGE = 'biguoai_usage'
+const STORAGE_KEY_BONUS = 'biguoai_bonus'
 const STORAGE_KEY_VIP = 'biguoai_vip'
 const STORAGE_KEY_API = 'biguoai_apikey'
 const STORAGE_KEY_VIP_CODE = 'biguoai_vipcode'
@@ -228,6 +229,28 @@ function incrementUsage(): number {
   return newCount
 }
 
+function getBonusUses(): number {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_BONUS)
+    if (!raw) return 0
+    const data = JSON.parse(raw)
+    if (data.date === getTodayStr()) return data.bonus
+  } catch { /* ignore */ }
+  return 0
+}
+
+function addBonusUses(n: number): number {
+  const today = getTodayStr()
+  const current = getBonusUses()
+  const newBonus = current + n
+  localStorage.setItem(STORAGE_KEY_BONUS, JSON.stringify({ date: today, bonus: newBonus }))
+  return newBonus
+}
+
+function getTotalDailyLimit(): number {
+  return FREE_DAILY_LIMIT + getBonusUses()
+}
+
 function isVip(): boolean {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_VIP)
@@ -235,10 +258,6 @@ function isVip(): boolean {
     const data = JSON.parse(raw)
     return data.expires > Date.now()
   } catch { return false }
-}
-
-function saveVip(days: number) {
-  localStorage.setItem(STORAGE_KEY_VIP, JSON.stringify({ expires: Date.now() + days * 86400000 }))
 }
 
 function getSavedApiKey(): string {
@@ -278,7 +297,6 @@ export default function App() {
   const [apiKey, setApiKey] = useState(getSavedApiKey() || DEFAULT_API_KEY)
   const [, forceUpdate] = useState(0)
   const [vip, setVip] = useState(isVip())
-  const [verifyCode, setVerifyCode] = useState('')
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const outputRef = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = useState(false)
@@ -330,7 +348,7 @@ export default function App() {
 
     if (!vip) {
       const used = getUsage()
-      if (used >= FREE_DAILY_LIMIT) {
+      if (used >= getTotalDailyLimit()) {
         setShowPayment(true)
         return
       }
@@ -413,20 +431,6 @@ export default function App() {
     }
   }, [output, showToast])
 
-  const handleVerifyVip = useCallback(() => {
-    const code = verifyCode.trim()
-    if (!code) { showToast('请输入验证码', 'warning'); return }
-    if (code === getCurrentVipCode()) {
-      saveVip(365)
-      setVip(true)
-      setVerifyCode('')
-      setShowPayment(false)
-      showToast('升级成功！祝你毕业顺利 🎉', 'success')
-    } else {
-      showToast('验证码无效，请检查后重试', 'error')
-    }
-  }, [verifyCode, showToast])
-
   // Reset output when tab changes
   useEffect(() => {
     setOutput('')
@@ -440,8 +444,7 @@ export default function App() {
     const codeFromUrl = params.get('vip')
     if (codeFromUrl && codeFromUrl.length >= 4) {
       setCurrentVipCode(codeFromUrl)
-      setVerifyCode(codeFromUrl)
-      showToast('验证码已自动填入，点击「验证并激活」即可 🎉', 'success')
+      showToast('欢迎使用毕过AI！每天免费5次 🎉', 'success')
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -473,7 +476,7 @@ export default function App() {
         <div>
           <strong>毕过AI · 论文写作助手：</strong>
           从降重润色到盲审检查，一站式搞定毕业论文。每天
-          {FREE_DAILY_LIMIT} 次免费，升级会员整篇论文无限处理 👇
+          {FREE_DAILY_LIMIT} 次免费，分享好友额外 +3 次 👇
         </div>
       </div>
 
@@ -598,103 +601,81 @@ export default function App() {
         <span className="usage-text">
           {vip
             ? '👑 会员用户 · 无限使用'
-            : `今日免费剩余：${remaining} / ${FREE_DAILY_LIMIT} 次`}
+            : `今日可用：${remaining} / ${getTotalDailyLimit()} 次`}
         </span>
-        {!vip && (
-          <button className="btn-upgrade" onClick={() => setShowPayment(true)}>
-            🔓 升级会员
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            className="btn-outline"
+            style={{ borderColor: '#10b981', color: '#10b981' }}
+            onClick={() => {
+              addBonusUses(3)
+              const shareUrl = window.location.origin + window.location.pathname
+              const shareText = '论文党必备！免费降重+盲审检查工具 👉 ' + shareUrl
+              if (navigator.share) {
+                navigator.share({ title: '毕过AI', text: shareText })
+              } else {
+                navigator.clipboard.writeText(shareText)
+                showToast('链接已复制！分享给好友双方各+3次 🎉', 'success')
+              }
+              refreshUsage()
+            }}
+          >
+            📤 分享得次数
           </button>
-        )}
+          <button className="btn-outline" onClick={() => setShowPayment(true)}>
+            ☕ 请喝奶茶
+          </button>
+        </div>
       </div>
 
       {/* Footer */}
       <div className="footer">
-        <p>毕过AI · 论文写作助手 — 降重润色·盲审检查·一站搞定 | 有问题反馈给开发者</p>
+        <p>毕过AI · 论文写作助手 — 免费！觉得好用请我喝杯奶茶 ☕</p>
       </div>
 
       {/* ===== Payment Modal ===== */}
       {showPayment && (
         <div className="modal-overlay" onClick={() => setShowPayment(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3>🎓 升级毕过AI会员</h3>
-            <p>毕业季限时优惠，一次解锁全部功能！</p>
-
-            <div style={{ fontSize: 13, background: '#f0fdf4', padding: '10px 14px', borderRadius: 8, marginBottom: 16, lineHeight: 1.6, color: '#166534' }}>
-              ✅ 整篇论文无限次降重 &nbsp;·&nbsp; 每次最多 2 万字<br />
+            <h3>☕ 请我喝杯奶茶</h3>
+            <p>如果毕过AI帮到了你，可以请我喝杯奶茶支持一下～</p>
+            <div style={{ fontSize: 13, padding: '10px 14px', borderRadius: 8, marginBottom: 16, lineHeight: 1.6, color: '#64748b' }}>
+              工具永久免费，打赏全凭自愿 ❤️<br />
               ✅ 盲审专区全部开放 &nbsp;·&nbsp; 公式/图表/清单/文献<br />
               ✅ 查重报告分析 &nbsp;·&nbsp; 高重复段落定位与改写<br />
               ✅ 参考文献格式整理 &nbsp;·&nbsp; GB/T 7714 自动规范
             </div>
 
-            <div className="modal-pricing">
-              <div className="pricing-card recommended">
-                <div>
-                  <div className="pricing-name">🎉 毕业季卡 · 最划算</div>
-                  <div style={{ fontSize: 12, color: '#64748b' }}>永久有效，不限次数 · 不限字数 · 全部功能</div>
-                </div>
-                <div>
-                  <span className="pricing-original">¥99</span>
-                  <span className="pricing-price">¥49.9</span>
-                </div>
-              </div>
-              <div className="pricing-card">
-                <div>
-                  <div className="pricing-name">📱 月卡</div>
-                  <div style={{ fontSize: 12, color: '#64748b' }}>30天无限使用</div>
-                </div>
-                <div className="pricing-price">¥29.9</div>
-              </div>
-            </div>
-
             <div className="qr-area">
-              <p>💳 扫码付款后获取验证码</p>
-              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>
-                支付宝 / 微信 都可以
-              </div>
+              <p>💳 扫码支持</p>
               <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
                 <div>
                   <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4, textAlign: 'center' }}>支付宝</div>
                   <img
                     src={import.meta.env.BASE_URL + 'qr-alipay.png'}
-                    alt="支付宝收款码"
+                    alt="支付宝"
                     style={{ width: 140, height: 140, objectFit: 'contain', borderRadius: 8, display: 'block', border: '1px solid #e2e8f0' }}
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none'
-                    }}
+                    onError={(e) => { e.currentTarget.style.display = 'none' }}
                   />
                 </div>
                 <div>
                   <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4, textAlign: 'center' }}>微信</div>
                   <img
                     src={import.meta.env.BASE_URL + 'qr-wechat.png'}
-                    alt="微信收款码"
+                    alt="微信"
                     style={{ width: 140, height: 140, objectFit: 'contain', borderRadius: 8, display: 'block', border: '1px solid #e2e8f0' }}
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none'
-                    }}
+                    onError={(e) => { e.currentTarget.style.display = 'none' }}
                   />
                 </div>
               </div>
-              <div className="qr-tip">
-                ⚡ 付款后联系我获取验证码，输入后激活
-              </div>
             </div>
 
-            <input
-              className="verify-input"
-              placeholder="输入交易单号后6位"
-              value={verifyCode}
-              onChange={e => setVerifyCode(e.target.value)}
-            />
-            <button
-              className="btn-primary"
-              style={{ background: 'linear-gradient(135deg, #f59e0b, #ef4444)' }}
-              onClick={handleVerifyVip}
-            >
-              🔓 验证并激活
-            </button>
+            <div className="qr-tip" style={{ textAlign: 'center', marginBottom: 16, fontSize: 12, color: '#64748b' }}>
+              ⚡ 工具永久免费，打赏全凭自愿 ❤️
+            </div>
+
             <button className="btn-close-modal" onClick={() => setShowPayment(false)}>
-              稍后再说
+              继续使用
             </button>
           </div>
         </div>
