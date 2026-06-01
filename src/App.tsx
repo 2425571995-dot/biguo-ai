@@ -445,8 +445,9 @@ export default function App() {
       <div className="info-banner">
         <span>💡</span>
         <div>
-          <strong>毕业季福利：</strong>
-          每天免费使用 {FREE_DAILY_LIMIT} 次，升级会员无限用！盲审专区也能用 👇
+          <strong>毕过AI · 论文写作助手：</strong>
+          从降重润色到盲审检查，一站式搞定毕业论文。每天
+          {FREE_DAILY_LIMIT} 次免费，升级会员整篇论文无限处理 👇
         </div>
       </div>
 
@@ -582,7 +583,7 @@ export default function App() {
 
       {/* Footer */}
       <div className="footer">
-        <p>毕过AI · 论文降重+盲审检查一站搞定 | 有问题反馈给开发者</p>
+        <p>毕过AI · 论文写作助手 — 降重润色·盲审检查·一站搞定 | 有问题反馈给开发者</p>
       </div>
 
       {/* ===== Payment Modal ===== */}
@@ -590,13 +591,20 @@ export default function App() {
         <div className="modal-overlay" onClick={() => setShowPayment(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h3>🎓 升级毕过AI会员</h3>
-            <p>毕业季限时优惠，一次解锁全部功能！降重 + 盲审检查无限用</p>
+            <p>毕业季限时优惠，一次解锁全部功能！</p>
+
+            <div style={{ fontSize: 13, background: '#f0fdf4', padding: '10px 14px', borderRadius: 8, marginBottom: 16, lineHeight: 1.6, color: '#166534' }}>
+              ✅ 整篇论文无限次降重 &nbsp;·&nbsp; 每次最多 2 万字<br />
+              ✅ 盲审专区全部开放 &nbsp;·&nbsp; 公式/图表/清单/文献<br />
+              ✅ 查重报告分析 &nbsp;·&nbsp; 高重复段落定位与改写<br />
+              ✅ 参考文献格式整理 &nbsp;·&nbsp; GB/T 7714 自动规范
+            </div>
 
             <div className="modal-pricing">
               <div className="pricing-card recommended">
                 <div>
                   <div className="pricing-name">🎉 毕业季卡 · 最划算</div>
-                  <div style={{ fontSize: 12, color: '#64748b' }}>全部功能无限使用 + 不限字数 + 盲审专区</div>
+                  <div style={{ fontSize: 12, color: '#64748b' }}>永久有效，不限次数 · 不限字数 · 全部功能</div>
                 </div>
                 <div>
                   <span className="pricing-original">¥99</span>
