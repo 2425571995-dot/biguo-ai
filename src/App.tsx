@@ -434,6 +434,17 @@ export default function App() {
     handleRemoveImage()
   }, [tab]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // On mount: check URL for VIP code
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const codeFromUrl = params.get('vip')
+    if (codeFromUrl && codeFromUrl.length >= 4) {
+      setCurrentVipCode(codeFromUrl)
+      setVerifyCode(codeFromUrl)
+      showToast('验证码已自动填入，点击「验证并激活」即可 🎉', 'success')
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   const usedToday = getUsage()
   const remaining = Math.max(0, FREE_DAILY_LIMIT - usedToday)
   const isReviewTab = currentTab.group === 'review'
@@ -665,7 +676,7 @@ export default function App() {
                 </div>
               </div>
               <div className="qr-tip">
-                ⚡ 付款后把「交易单号后6位」粘贴到下面输入框激活
+                ⚡ 付款后联系我获取验证码，输入后激活
               </div>
             </div>
 
@@ -744,6 +755,21 @@ export default function App() {
                 placeholder="输入新的激活码"
                 style={{ fontFamily: 'monospace', fontSize: 18, textAlign: 'center' }}
               />
+              {adminCode && (
+                <div style={{ marginTop: 8, padding: '8px 10px', background: '#f0fdf4', borderRadius: 8, fontSize: 12, color: '#166534', wordBreak: 'break-all' }}>
+                  <strong>分享链接（发给付款的人）：</strong><br />
+                  <span style={{ fontSize: 11, userSelect: 'all' }}>{window.location.origin + window.location.pathname}?vip={adminCode}</span>
+                  <button
+                    style={{ marginLeft: 8, background: 'none', border: '1px solid #166534', borderRadius: 4, padding: '2px 8px', fontSize: 11, color: '#166534', cursor: 'pointer' }}
+                    onClick={() => {
+                      navigator.clipboard.writeText(window.location.origin + window.location.pathname + '?vip=' + adminCode)
+                      showToast('链接已复制！', 'success')
+                    }}
+                  >
+                    📋 复制
+                  </button>
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'flex', gap: 8 }}>
