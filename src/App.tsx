@@ -260,6 +260,10 @@ function isVip(): boolean {
   } catch { return false }
 }
 
+function saveVip(days: number) {
+  localStorage.setItem(STORAGE_KEY_VIP, JSON.stringify({ expires: Date.now() + days * 86400000 }))
+}
+
 function getSavedApiKey(): string {
   return localStorage.getItem(STORAGE_KEY_API) || ''
 }
@@ -297,6 +301,7 @@ export default function App() {
   const [apiKey, setApiKey] = useState(getSavedApiKey() || DEFAULT_API_KEY)
   const [, forceUpdate] = useState(0)
   const [vip, setVip] = useState(isVip())
+  const [verifyCode, setVerifyCode] = useState('')
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const outputRef = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = useState(false)
@@ -622,8 +627,8 @@ export default function App() {
           >
             📤 分享得次数
           </button>
-          <button className="btn-outline" onClick={() => setShowPayment(true)}>
-            ☕ 请喝奶茶
+          <button className="btn-upgrade" onClick={() => setShowPayment(true)}>
+            🚀 ¥9.9 无限用
           </button>
         </div>
       </div>
@@ -637,17 +642,15 @@ export default function App() {
       {showPayment && (
         <div className="modal-overlay" onClick={() => setShowPayment(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3>☕ 请我喝杯奶茶</h3>
-            <p>如果毕过AI帮到了你，可以请我喝杯奶茶支持一下～</p>
+            <h3>🚀 ¥9.9 无限使用</h3>
+            <p>解锁全部功能，不限次数不限字数！</p>
             <div style={{ fontSize: 13, padding: '10px 14px', borderRadius: 8, marginBottom: 16, lineHeight: 1.6, color: '#64748b' }}>
-              工具永久免费，打赏全凭自愿 ❤️<br />
-              ✅ 盲审专区全部开放 &nbsp;·&nbsp; 公式/图表/清单/文献<br />
-              ✅ 查重报告分析 &nbsp;·&nbsp; 高重复段落定位与改写<br />
-              ✅ 参考文献格式整理 &nbsp;·&nbsp; GB/T 7714 自动规范
+              ✅ 付款后在下面输入 <strong>6位数字</strong> 即可激活<br />
+              ✅ 不付款也可以输入6位数字（算你支持我了 🫶）
             </div>
 
             <div className="qr-area">
-              <p>💳 扫码支持</p>
+              <p>💳 扫码支付 ¥9.9 自愿支持</p>
               <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
                 <div>
                   <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4, textAlign: 'center' }}>支付宝</div>
@@ -670,12 +673,35 @@ export default function App() {
               </div>
             </div>
 
-            <div className="qr-tip" style={{ textAlign: 'center', marginBottom: 16, fontSize: 12, color: '#64748b' }}>
-              ⚡ 工具永久免费，打赏全凭自愿 ❤️
+            <div style={{ marginTop: 16 }}>
+              <input
+                className="verify-input"
+                placeholder="输入6位数字激活"
+                value={verifyCode}
+                onChange={e => setVerifyCode(e.target.value)}
+                maxLength={6}
+              />
+              <button
+                className="btn-primary"
+                style={{ background: 'linear-gradient(135deg, #f59e0b, #ef4444)' }}
+                onClick={() => {
+                  if (verifyCode.trim().length >= 6) {
+                    setVip(true)
+                    saveVip(365)
+                    setVerifyCode('')
+                    setShowPayment(false)
+                    showToast('🎉 激活成功！现在可以无限使用了', 'success')
+                    refreshUsage()
+                  } else {
+                    showToast('请输入6位数字', 'warning')
+                  }
+                }}
+              >
+                🔓 激活
+              </button>
             </div>
-
             <button className="btn-close-modal" onClick={() => setShowPayment(false)}>
-              继续使用
+              暂不升级
             </button>
           </div>
         </div>
