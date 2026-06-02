@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PLC二次加压供水流程图预览</title>
+  <style>
+    :root {
+      --ink: #17212b;
+      --line: #6c7a89;
+      --paper: #ffffff;
+      --panel: #f4f6f8;
+      --accent: #1f4e79;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: #e9edf1;
+      font-family: "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    }
+
+    .page {
+      width: 1123px;
+      min-height: 794px;
+      margin: 24px auto;
+      background: var(--paper);
+      padding: 36px 40px 28px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      letter-spacing: 1px;
+      text-align: center;
+    }
+
+    .meta {
+      margin-bottom: 20px;
+      font-size: 12px;
+      color: #47525e;
+      text-align: center;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .col {
+      border: 1px solid var(--line);
+      padding: 12px;
+      min-height: 640px;
+      background: linear-gradient(180deg, #fff, #fbfcfd);
+    }
+
+    .col h2 {
+      margin: 0 0 10px;
+      padding-bottom: 6px;
+      font-size: 16px;
+      color: var(--accent);
+      border-bottom: 2px solid var(--accent);
+    }
+
+    .node {
+      border: 1.5px solid #263746;
+      padding: 10px 8px;
+      margin: 0 auto;
+      width: 88%;
+      text-align: center;
+      font-size: 13px;
+      line-height: 1.35;
+      background: var(--panel);
+    }
+
+    .node.round {
+      border-radius: 18px;
+      background: #eef4f9;
+    }
+
+    .node.decision {
+      width: 78%;
+      transform: rotate(45deg);
+      padding: 0;
+      height: 82px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+    }
+
+    .node.decision span {
+      transform: rotate(-45deg);
+      display: block;
+      width: 78%;
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .arrow {
+      text-align: center;
+      font-size: 22px;
+      line-height: 1;
+      color: #3c4b57;
+      margin: 6px 0;
+    }
+
+    .branch {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .tag {
+      font-size: 11px;
+      text-align: center;
+      color: #5b6773;
+      margin: 2px 0 6px;
+    }
+
+    .note {
+      margin-top: 18px;
+      border-top: 1px dashed var(--line);
+      padding-top: 10px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .note strong {
+      color: var(--accent);
+    }
+
+    @page {
+      size: A4 landscape;
+      margin: 10mm;
+    }
+
+    @media print {
+      body { background: #fff; }
+      .page {
+        margin: 0;
+        width: auto;
+        min-height: auto;
+        box-shadow: none;
+        padding: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>PLC二次加压供水程序流程图</h1>
+    <div class="meta">工程预览版 | 按标准 PLC 二次加压供水控制逻辑整理</div>
+
+    <div class="grid">
+      <section class="col">
+        <h2>一、初始化与安全检查</h2>
+        <div class="node round">开始</div>
+        <div class="arrow">↓</div>
+        <div class="node">系统上电</div>
+        <div class="arrow">↓</div>
+        <div class="node">PLC初始化<br>内部状态复位</div>
+        <div class="arrow">↓</div>
+        <div class="node decision"><span>急停、缺水、故障状态是否正常</span></div>
+        <div class="branch">
+          <div>
+            <div class="tag">否</div>
+            <div class="node">停机并报警</div>
+            <div class="arrow">↓</div>
+            <div class="node">等待人工复位</div>
+          </div>
+          <div>
+            <div class="tag">是</div>
+            <div class="node">进入模式选择</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="col">
+        <h2>二、模式控制</h2>
+        <div class="node decision"><span>手动 / 自动选择</span></div>
+        <div class="branch">
+          <div>
+            <div class="tag">手动</div>
+            <div class="node">手动启动对应水泵</div>
+            <div class="arrow">↓</div>
+            <div class="node decision"><span>手动停止 / 急停 / 故障</span></div>
+            <div class="arrow">↓</div>
+            <div class="node">停止对应水泵输出</div>
+          </div>
+          <div>
+            <div class="tag">自动</div>
+            <div class="node">采集出水压力 AI01</div>
+            <div class="arrow">↓</div>
+            <div class="node decision"><span>压力是否低于启泵下限</span></div>
+            <div class="arrow">↓</div>
+            <div class="node">启动主泵<br>允许变频器运行</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="col">
+        <h2>三、恒压运行与保护</h2>
+        <div class="node">PID调节变频频率<br>维持恒压供水</div>
+        <div class="arrow">↓</div>
+        <div class="node decision"><span>频率到上限且压力仍不足</span></div>
+        <div class="arrow">↓</div>
+        <div class="node">追加启动备用泵</div>
+        <div class="arrow">↓</div>
+        <div class="node decision"><span>压力高于停泵上限且延时到</span></div>
+        <div class="arrow">↓</div>
+        <div class="node">减泵或停泵</div>
+        <div class="arrow">↓</div>
+        <div class="node">故障检测<br>切除故障泵并报警</div>
+        <div class="arrow">↓</div>
+        <div class="node">轮泵判断<br>切换主泵顺序</div>
+        <div class="arrow">↓</div>
+        <div class="node round">返回循环监测</div>
+      </section>
+    </div>
+
+    <div class="note">
+      <strong>保护逻辑：</strong> 急停保护、缺水保护、水泵过载保护、变频器故障保护、压力异常保护、手自动互锁。<br>
+      <strong>建议点位：</strong> DI01 急停，DI02 手自动，DI03 缺水，AI01 出水压力，DO01-DO03 水泵运行，DO04 变频允许运行，AO01 频率给定。<br>
+      <strong>备注：</strong> 当前版面为工程预览版，用于确认流程结构；若需要，我可以继续细化成 2 泵或 3 泵正式出图版。
+    </div>
+  </div>
+</body>
+</html>

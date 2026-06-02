@@ -1,23 +1,21 @@
 import { useState, useEffect, useRef } from 'react'
-import { DEEPSEEK_URL, SENSITIVE_WORDS, SHARE_URL } from './constants'
-import type { Post, SensitiveWord, Template } from './types'
-import { fetchWithCORS, parseJSONPosts, buildPrompt } from './utils/api'
+import { DEEPSEEK_URL, SHARE_URL, SAMPLE_THESIS_TEXT } from './constants'
+import { buildThesisPrompt, fetchWithCORS } from './utils/api'
 import { addVisitStat, addGenStat, saveApiKey, getApiKey, getDarkMode, saveDarkMode, redeemCode, isMemberActive, getShareBonus, checkReferralBonus, consumeShareBonus } from './utils/storage'
 import { useToast } from './hooks/useToast'
 import { useQuota } from './hooks/useQuota'
 import { useHistory } from './hooks/useHistory'
+import type { Intensity } from './types'
 
 import Header from './components/Header'
 import SettingsModal from './components/SettingsModal'
 import UpgradeModal from './components/UpgradeModal'
 import TemplatePresets from './components/TemplatePresets'
 import InputForm from './components/InputForm'
-import ExamplePreview from './components/ExamplePreview'
 import ResultSection from './components/ResultSection'
 import InviteShare from './components/InviteShare'
 import Footer from './components/Footer'
 import Toast from './components/Toast'
-import HistoryPanel from './components/HistoryPanel'
 
 function App() {
   // ===== 核心状态 =====
@@ -25,29 +23,20 @@ function App() {
   const [showSettings, setShowSettings] = useState(() => !getApiKey())
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [dark, setDark] = useState(() => getDarkMode())
-
-  // ===== 表单状态 =====
-  const [product, setProduct] = useState('')
-  const [features, setFeatures] = useState('')
-  const [price, setPrice] = useState('')
-  const [audienceTags, setAudienceTags] = useState<string[]>([])
-  const [style, setStyle] = useState('caozhong')
-
-  // ===== 生成状态 =====
-  const [loading, setLoading] = useState(false)
-  const [posts, setPosts] = useState<Post[]>([])
-  const [formattingId, setFormattingId] = useState<number | null>(null)
-  const [sensitiveResults, setSensitiveResults] = useState<Record<number, SensitiveWord[]>>({})
-  const [verifying, setVerifying] = useState(false)
-
-  // ===== 历史记录 Tab =====
-  const [showHistory, setShowHistory] = useState(false)
   const [isMember, setIsMember] = useState(() => isMemberActive())
+
+  // ===== 论文降重状态 =====
+  const [inputText, setInputText] = useState('')
+  const [intensity, setIntensity] = useState<Intensity>('moderate')
+  const [activeFeature, setActiveFeature] = useState('降重')
+  const [resultText, setResultText] = useState('')
+  const [originalText, setOriginalText] = useState('')
+  const [loading, setLoading] = useState(false)
 
   // ===== Hooks =====
   const { toasts, showToast, removeToast } = useToast()
   const { remaining, incrementCount, resetCount, DAILY_LIMIT } = useQuota()
-  const { history, addHistoryItem, deleteHistoryItem, clearAllHistory } = useHistory()
+  const { addHistoryItem } = useHistory()
   const resultRef = useRef<HTMLDivElement>(null)
 
   // ===== 暗黑模式 =====
@@ -70,98 +59,100 @@ function App() {
   // ===== 业务方法 =====
   const handleSaveKey = (v: string) => { setApiKey(v); saveApiKey(v) }
 
-  const toggleAudienceTag = (tag: string) => {
-    setAudienceTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
+  const handlePasteExample = () => {
+    setInputText(SAMPLE_THESIS_TEXT)
+    showToast('📋 已填入示例文本', 'success')
   }
 
-  const handleUseTemplate = (t: Template) => {
-    setProduct(t.product); setFeatures(t.features); setPrice(t.price)
-    setAudienceTags(t.audience.includes('/') ? t.audience.split('/') : [t.audience])
-  }
-
-  const generate = async (force = false) => {
-    if (!product.trim()) { showToast('请输入产品名称', 'warning'); return }
+  const handleGenerate = async () => {
+    const text = inputText.trim()
+    if (!text) { showToast('请输入需要降重的论文段落', 'warning'); return }
+    if (text.length > 2000) { showToast('内容过长，建议分段处理', 'warning'); return }
     if (!apiKey.trim()) { setShowSettings(true); showToast('请先设置 DeepSeek API Key', 'warning'); return }
-    if (remaining + shareBonus <= 0 && !force && !isMember) { setShowUpgrade(true); return }
+    if (remaining + shareBonus <= 0 && !isMember) { setShowUpgrade(true); return }
 
-    setLoading(true); setSensitiveResults({})
+    setLoading(true)
+    setOriginalText(text)
     try {
-      const audienceText = audienceTags.length > 0 ? audienceTags.join('、') : '普通消费者'
       const res = await fetchWithCORS(DEEPSEEK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
           model: 'deepseek-chat',
           messages: [
-            { role: 'system', content: '你是一个小红书爆款文案生成助手。只输出JSON，不输出其他内容。确保JSON中content字段里的双引号已转义（用\\"），换行符用\\n表示。' },
-            { role: 'user', content: buildPrompt(product, features, price, audienceText, style) },
+            { role: 'system', content: '你是一个专业的论文降重和学术写作助手。输出处理后的文本即可，不要输出JSON，不要加额外说明。' },
+            { role: 'user', content: buildThesisPrompt(text, intensity, activeFeature) },
           ],
-          temperature: 0.9,
+          temperature: 0.7,
           max_tokens: 4096,
         }),
       })
       if (!res.ok) { const errData = await res.json().catch(() => ({})); throw new Error(errData.error?.message || errData.error || `HTTP ${res.status}`) }
 
       const data = await res.json()
-      let parsed: Omit<Post, 'id'>[]
-      if (data.posts) { parsed = data.posts } else { parsed = parseJSONPosts(data.choices[0].message.content) }
+      let result = data.choices[0].message.content
+      // 清理可能的 markdown 标记
+      result = result.replace(/^```[\w]*\n?/gm, '').replace(/```$/gm, '').trim()
 
-      const newPosts = parsed.map((p, i) => ({ ...p, id: i }))
-      setPosts(newPosts)
-      // 优先消耗赠送次数，再消耗每日额度
+      setResultText(result)
+      // 消耗额度
       if (shareBonus > 0) { consumeShareBonus(); setShareBonus(getShareBonus()) }
       else { incrementCount() }
       addGenStat()
-      addHistoryItem(product, newPosts)
-      setShowHistory(false)
+      addHistoryItem(text, [{ id: 0, title: '', content: result }])
 
       setTimeout(() => resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
-      showToast('✅ 文案生成成功！', 'success')
+      showToast('✅ 降重完成！', 'success')
     } catch (e: any) {
-      showToast('生成失败: ' + e.message, 'error')
+      showToast('处理失败: ' + e.message, 'error')
     } finally { setLoading(false) }
   }
 
-  const verifyKey = async () => {
-    if (!apiKey.trim()) { showToast('请先输入 API Key', 'warning'); return }
-    setVerifying(true)
+  const handleMoreAcademic = async () => {
+    if (!resultText.trim()) return
+    if (!apiKey.trim()) { setShowSettings(true); showToast('请先设置 API Key', 'warning'); return }
+
+    setLoading(true)
     try {
-      const res = await fetchWithCORS(DEEPSEEK_URL.replace('/chat/completions', '/models'), { headers: { Authorization: `Bearer ${apiKey}` } })
-      res.ok ? showToast('✅ API Key 验证成功！', 'success') : showToast('❌ Key 无效', 'error')
-    } catch (e: any) { showToast('❌ ' + (e.message || '验证失败'), 'error') }
-    finally { setVerifying(false) }
+      const res = await fetchWithCORS(DEEPSEEK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: [
+            { role: 'system', content: '你是一个专业的学术写作助手。仅输出处理后的文本，不要额外解释。' },
+            { role: 'user', content: buildThesisPrompt(resultText, intensity, '转为学术') },
+          ],
+          temperature: 0.7,
+          max_tokens: 4096,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error('处理失败')
+      let result = data.choices[0].message.content
+      result = result.replace(/^```[\w]*\n?/gm, '').replace(/```$/gm, '').trim()
+      setResultText(result)
+      showToast('✅ 已转为更学术的表达！', 'success')
+    } catch (e: any) {
+      showToast('处理失败: ' + (e.message || ''), 'error')
+    } finally { setLoading(false) }
   }
 
-  const copyPost = (post: Post) => {
-    navigator.clipboard.writeText(`${post.title}\n\n${post.content}\n\n${post.tags.join(' ')}\n\n—— 由「小红书AI文案生成器」创作 ${SHARE_URL}`)
-    showToast('✅ 已复制到剪贴板')
+  const handleCopyResult = () => {
+    navigator.clipboard.writeText(resultText)
+    showToast('✅ 结果已复制到剪贴板')
   }
 
-  const copyAll = () => {
-    const text = posts.map(p => `${p.title}\n\n${p.content}\n\n${p.tags.join(' ')}`).join('\n\n---\n\n')
-    navigator.clipboard.writeText(text)
-    showToast('✅ 全部文案已复制！')
+  const handleContinueOptimize = () => {
+    if (!resultText.trim()) return
+    setInputText(resultText)
+    showToast('📋 结果已填回输入框，可继续优化', 'success')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const copyShareLink = () => {
-    navigator.clipboard.writeText(`小红书AI文案生成器 - 免费在线种草文案制作工具\n${SHARE_URL}`)
+    navigator.clipboard.writeText(`毕过AI · 论文降重助手 - 免费在线论文降重工具\n${SHARE_URL}`)
     showToast('✅ 工具链接已复制，分享给朋友吧！')
-  }
-
-  const shareWechat = (post: Post) => {
-    navigator.clipboard.writeText(`${post.title}\n\n${post.content}\n\n${post.tags.join(' ')}\n\n—— 由「小红书AI文案生成器」创作 ${SHARE_URL}`)
-    showToast('✅ 已复制文案，去微信粘贴发送！')
-  }
-
-  const shareWeibo = (post: Post) => {
-    const t = encodeURIComponent(`${post.title}\n\n${post.content}\n\n#小红书文案# #AI工具#\n${SHARE_URL}`)
-    window.open(`https://service.weibo.com/share/share.php?title=${t}&url=${encodeURIComponent(SHARE_URL)}`, '_blank')
-  }
-
-  const checkSensitiveWords = (post: Post) => {
-    const text = `${post.title} ${post.content} ${post.tags.join(' ')}`
-    setSensitiveResults(prev => ({ ...prev, [post.id]: SENSITIVE_WORDS.filter(({ word }) => text.includes(word)) }))
-    showToast('🔍 敏感词检测完成')
   }
 
   const handleActivateCode = (code: string) => {
@@ -173,75 +164,85 @@ function App() {
     }
   }
 
-  const aiFormat = async (post: Post) => {
-    if (!apiKey.trim()) { showToast('请先设置 API Key', 'warning'); return }
-    setFormattingId(post.id)
-    try {
-      const res = await fetchWithCORS(DEEPSEEK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: 'deepseek-chat',
-          messages: [
-            { role: 'system', content: '你是一个小红书文案优化助手。优化文案使其更生动有吸引力，保留原文标签和核心信息。' },
-            { role: 'user', content: `请优化以下小红书文案，让语言更生动、更有吸引力，保留原意和标签：\n\n标题：${post.title}\n正文：${post.content}\n\n直接输出优化后的标题和正文，用 --- 分隔标题和正文。` },
-          ],
-          temperature: 0.7, max_tokens: 1024,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error('优化失败')
-      const parts = data.choices[0].message.content.split('---')
-      setPosts(prev => prev.map(p => p.id === post.id ? { ...p, title: parts[0]?.trim() || p.title, content: parts[1]?.trim() || p.content } : p))
-      showToast('✅ AI 排版完成！')
-    } catch (e: any) { showToast('AI 排版失败: ' + (e.message || ''), 'error') }
-    finally { setFormattingId(null) }
+  const handleFeatureChange = (key: string) => {
+    setActiveFeature(key)
   }
 
+  const totalRemaining = remaining + shareBonus
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 transition-colors duration-300">
-      <Header remaining={remaining + shareBonus} dailyLimit={DAILY_LIMIT} dark={dark} isMember={isMember} onToggleDark={() => setDark(!dark)} onOpenSettings={() => setShowSettings(true)} />
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 transition-colors duration-300">
+      <Header
+        remaining={totalRemaining}
+        dark={dark}
+        onToggleDark={() => setDark(!dark)}
+        onOpenSettings={() => setShowSettings(true)}
+      />
 
-      <main className="mx-auto max-w-[1400px] px-6 py-8">
-        {showSettings && <SettingsModal apiKey={apiKey} verifying={verifying} onSaveKey={handleSaveKey} onVerify={verifyKey} onClose={() => setShowSettings(false)} />}
-        {showUpgrade && <UpgradeModal onContinue={() => { setShowUpgrade(false); generate(true) }} onReset={() => { setShowUpgrade(false); resetCount(); showToast('✅ 次数已重置') }} onClose={() => setShowUpgrade(false)} onActivateCode={handleActivateCode} />}
+      {/* ===== 黄色提示横幅 ===== */}
+      <div className="bg-amber-50 dark:bg-amber-900/10 border-b border-amber-100 dark:border-amber-900/30">
+        <div className="mx-auto max-w-[1400px] px-4 sm:px-6 py-2.5 sm:py-3">
+          <p className="text-xs sm:text-sm text-amber-700 dark:text-amber-400 text-center leading-relaxed">
+            🎓 论文初稿别急着提交：先降重、再润色、最后做提交前检查。今日免费 5 次，分享好友 +3 次。
+          </p>
+        </div>
+      </div>
 
-        <TemplatePresets onSelect={handleUseTemplate} />
+      <main className="mx-auto max-w-[800px] px-4 sm:px-6 py-5 sm:py-8">
+        {showSettings && <SettingsModal apiKey={apiKey} verifying={false} onSaveKey={handleSaveKey} onVerify={() => {}} onClose={() => setShowSettings(false)} />}
+        {showUpgrade && <UpgradeModal onContinue={() => { setShowUpgrade(false); handleGenerate() }} onReset={() => { setShowUpgrade(false); resetCount(); showToast('✅ 次数已重置') }} onClose={() => setShowUpgrade(false)} onActivateCode={handleActivateCode} />}
+
+        {/* 功能按钮 */}
+        <TemplatePresets activeFeature={activeFeature} onFeatureChange={handleFeatureChange} />
+
+        {/* 输入区 */}
         <InputForm
-          product={product} features={features} price={price} audienceTags={audienceTags} style={style} loading={loading} remaining={remaining}
-          onProductChange={setProduct} onFeaturesChange={setFeatures} onPriceChange={setPrice}
-          onAudienceTagToggle={toggleAudienceTag} onStyleChange={setStyle} onGenerate={() => generate()}
+          inputText={inputText}
+          intensity={intensity}
+          loading={loading}
+          onInputChange={setInputText}
+          onIntensityChange={setIntensity}
+          onGenerate={handleGenerate}
+          onPasteExample={handlePasteExample}
         />
-        <ExamplePreview />
 
-        {/* 结果/历史 Tab 切换 */}
-        {(posts.length > 0 || history.length > 0) && (
-          <div className="mt-6 flex gap-1 border-b border-gray-200 dark:border-gray-700">
-            <button
-              onClick={() => setShowHistory(false)}
-              className={`px-4 py-2 text-sm font-medium transition-colors cursor-pointer ${!showHistory ? 'text-pink-600 dark:text-pink-400 border-b-2 border-pink-500' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600'}`}
-            >
-              当前结果
-            </button>
-            <button
-              onClick={() => setShowHistory(true)}
-              className={`px-4 py-2 text-sm font-medium transition-colors cursor-pointer ${showHistory ? 'text-pink-600 dark:text-pink-400 border-b-2 border-pink-500' : 'text-gray-400 dark:text-gray-500 hover:text-gray-600'}`}
-            >
-              历史记录 {history.length > 0 && <span className="ml-1 text-xs">({history.length})</span>}
-            </button>
-          </div>
-        )}
-
+        {/* 结果区 */}
         <ResultSection
           ref={resultRef}
-          loading={loading} posts={posts} formattingId={formattingId} sensitiveResults={sensitiveResults}
-          showHistory={showHistory}
-          product={product} features={features}
-          onCopy={copyPost} onFormat={aiFormat} onCheckSensitive={checkSensitiveWords}
-          onShareWechat={shareWechat} onShareWeibo={shareWeibo} onCopyAll={copyAll}
-          historyContent={<HistoryPanel history={history} onDelete={deleteHistoryItem} onClear={clearAllHistory} onCopyPost={copyPost} />}
+          loading={loading}
+          resultText={resultText}
+          hasResult={!!resultText}
+          originalText={originalText}
+          onCopyResult={handleCopyResult}
+          onContinueOptimize={handleContinueOptimize}
+          onMoreAcademic={handleMoreAcademic}
         />
-        {posts.length > 0 && !showHistory && <InviteShare onCopyShareLink={copyShareLink} bonusCount={shareBonus} />}
+
+        {/* 底部会员区 */}
+        <div className="mt-6 rounded-2xl border border-indigo-100 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-sm">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              📅 今日剩余免费次数：<strong className="text-indigo-600 dark:text-indigo-400">{totalRemaining}</strong> 次
+            </div>
+            <div className="flex gap-2 sm:gap-3">
+              <button
+                onClick={copyShareLink}
+                className="cursor-pointer rounded-lg border border-indigo-200 dark:border-gray-600 px-3.5 py-2 text-xs sm:text-sm font-medium text-indigo-600 dark:text-indigo-400 transition-colors hover:bg-indigo-50 dark:hover:bg-gray-700 active:scale-95"
+              >
+                🎁 分享得 +3 次
+              </button>
+              <button
+                onClick={() => setShowUpgrade(true)}
+                className="cursor-pointer rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 px-3.5 py-2 text-xs sm:text-sm font-medium text-white shadow-md shadow-indigo-200 dark:shadow-indigo-900/30 transition-all hover:shadow-lg active:scale-95"
+              >
+                ⭐ 开通无限次 ¥9.9
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 分享（有结果时显示） */}
+        {resultText && <InviteShare onCopyShareLink={copyShareLink} bonusCount={shareBonus} />}
       </main>
 
       <Footer />

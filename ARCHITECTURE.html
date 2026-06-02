@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>项目架构图</title>
+<style>
+body { font-family: sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; }
+h2 { margin-top: 40px; color: #333; }
+svg { display: block; margin: 0 auto; background: white; border: 1px solid #eee; }
+table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+th { background: #f5f5f5; }
+</style>
+</head>
+<body>
+<h1>项目架构图</h1>
+
+<h2>用户操作流程</h2>
+<svg viewBox="0 0 600 800" width="600" height="800">
+  <!-- Start -->
+  <rect x="235" y="10" width="130" height="40" rx="20" fill="#e8f5e9" stroke="#4caf50"/>
+  <text x="300" y="35" text-anchor="middle" font-size="14">Start</text>
+  
+  <!-- arrow -->
+  <line x1="300" y1="50" x2="300" y2="70" stroke="#333" marker-end="url(#arrow)"/>
+  
+  <!-- Load Homepage -->
+  <rect x="225" y="70" width="150" height="40" fill="#e3f2fd" stroke="#2196f3"/>
+  <text x="300" y="95" text-anchor="middle" font-size="13">Load Homepage</text>
+  
+  <line x1="300" y1="110" x2="300" y2="130" stroke="#333" marker-end="url(#arrow)"/>
+  
+  <!-- Check Login (diamond) -->
+  <polygon points="300,135 360,165 300,195 240,165" fill="#fff3e0" stroke="#ff9800"/>
+  <text x="300" y="168" text-anchor="middle" font-size="13">Check Login</text>
+  
+  <!-- No -> Show Login -->
+  <line x1="240" y1="165" x2="100" y2="165" stroke="#333" marker-end="url(#arrow)"/>
+  <text x="170" y="158" font-size="11" fill="#888">No</text>
+  <rect x="25" y="145" width="115" height="40" fill="#fce4ec" stroke="#e91e63"/>
+  <text x="82" y="170" text-anchor="middle" font-size="13">Show Login</text>
+  
+  <!-- Login back to check -->
+  <line x1="82" y1="185" x2="82" y2="210" stroke="#333" marker-end="url(#arrow)"/>
+  <line x1="82" y1="210" x2="270" y2="210" stroke="#333"/>
+  <line x1="270" y1="210" x2="270" y2="195" stroke="#333" marker-end="url(#arrow)"/>
+  <text x="180" y="203" font-size="11" fill="#888">Retry</text>
+  
+  <!-- Yes -> Input Form -->
+  <line x1="300" y1="195" x2="300" y2="215" stroke="#333" marker-end="url(#arrow)"/>
+  <text x="310" y="208" font-size="11" fill="#888">Yes</text>
+  
+  <rect x="225" y="215" width="150" height="40" fill="#e3f2fd" stroke="#2196f3"/>
+  <text x="300" y="240" text-anchor="middle" font-size="13">Input Form</text>
+  
+  <line x1="300" y1="255" x2="300" y2="275" stroke="#333" marker-end="url(#arrow)"/>
+  
+  <rect x="225" y="275" width="150" height="40" fill="#e3f2fd" stroke="#2196f3"/>
+  <text x="300" y="300" text-anchor="middle" font-size="13">Select Style</text>
+
+  <line x1="300" y1="315" x2="300" y2="335" stroke="#333" marker-end="url(#arrow)"/>
+  
+  <rect x="225" y="335" width="150" height="40" fill="#e3f2fd" stroke="#2196f3"/>
+  <text x="300" y="360" text-anchor="middle" font-size="13">Click Generate</text>
+
+  <line x1="300" y1="375" x2="300" y2="400" stroke="#333" marker-end="url(#arrow)"/>
+
+  <!-- Check Quota -->
+  <polygon points="300,405 360,435 300,465 240,435" fill="#fff3e0" stroke="#ff9800"/>
+  <text x="300" y="438" text-anchor="middle" font-size="13">Check Quota</text>
+
+  <!-- Low -->
+  <line x1="240" y1="435" x2="100" y2="435" stroke="#333" marker-end="url(#arrow)"/>
+  <text x="170" y="428" font-size="11" fill="#888">Low</text>
+  <rect x="25" y="415" width="115" height="40" fill="#fce4ec" stroke="#e91e63"/>
+  <text x="82" y="440" text-anchor="middle" font-size="13">Upgrade?</text>
+
+  <!-- OK -->
+  <line x1="300" y1="465" x2="300" y2="485" stroke="#333" marker-end="url(#arrow)"/>
+  <text x="310" y="478" font-size="11" fill="#888">OK</text>
+
+  <!-- Send Request -->
+  <rect x="225" y="485" width="150" height="40" fill="#e3f2fd" stroke="#2196f3"/>
+  <text x="300" y="510" text-anchor="middle" font-size="13">Send Request</text>
+
+  <line x1="300" y1="525" x2="300" y2="545" stroke="#333" marker-end="url(#arrow)"/>
+
+  <!-- Call API -->
+  <rect x="225" y="545" width="150" height="40" fill="#e8eaf6" stroke="#3f51b5"/>
+  <text x="300" y="570" text-anchor="middle" font-size="13">Call API</text>
+
+  <line x1="300" y1="585" x2="300" y2="610" stroke="#333" marker-end="url(#arrow)"/>
+
+  <!-- API Result -->
+  <polygon points="300,615 365,650 300,685 235,650" fill="#fff3e0" stroke="#ff9800"/>
+  <text x="300" y="653" text-anchor="middle" font-size="13">API Result?</text>
+
+  <!-- Fail -->
+  <line x1="235" y1="650" x2="120" y2="650" stroke="#333" marker-end="url(#arrow)"/>
+  <text x="170" y="643" font-size="11" fill="#888">Fail</text>
+  <rect x="55" y="630" width="110" height="40" fill="#fce4ec" stroke="#e91e63"/>
+  <text x="110" y="655" text-anchor="middle" font-size="13">Show Error</text>
+
+  <!-- Success -->
+  <line x1="300" y1="685" x2="300" y2="705" stroke="#333" marker-end="url(#arrow)"/>
+  <text x="310" y="698" font-size="11" fill="#888">Success</text>
+
+  <rect x="225" y="705" width="150" height="40" fill="#e3f2fd" stroke="#2196f3"/>
+  <text x="300" y="730" text-anchor="middle" font-size="13">Show Result</text>
+
+  <line x1="300" y1="745" x2="300" y2="765" stroke="#333" marker-end="url(#arrow)"/>
+
+  <!-- End -->
+  <rect x="235" y="765" width="130" height="40" rx="20" fill="#e8f5e9" stroke="#4caf50"/>
+  <text x="300" y="790" text-anchor="middle" font-size="14">End</text>
+
+  <!-- Arrow marker -->
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#333"/>
+    </marker>
+  </defs>
+</svg>
+
+<h2>系统架构</h2>
+<svg viewBox="0 0 600 280" width="600" height="280">
+  <!-- Frontend group -->
+  <rect x="10" y="10" width="320" height="150" fill="#f0f4f8" stroke="#ccc" rx="5"/>
+  <text x="15" y="30" font-size="12" fill="#666">Frontend</text>
+  
+  <rect x="20" y="45" width="80" height="30" fill="#e3f2fd" stroke="#2196f3"/>
+  <text x="60" y="65" text-anchor="middle" font-size="11">main.tsx</text>
+
+  <rect x="120" y="45" width="80" height="30" fill="#e3f2fd" stroke="#2196f3"/>
+  <text x="160" y="65" text-anchor="middle" font-size="11">App.tsx</text>
+
+  <line x1="100" y1="60" x2="118" y2="60" stroke="#333" marker-end="url(#arrow_small)"/>
+
+  <rect x="20" y="90" width="70" height="25" fill="#e8f5e9" stroke="#4caf50"/>
+  <text x="55" y="107" text-anchor="middle" font-size="10">Header</text>
+  <rect x="100" y="90" width="70" height="25" fill="#e8f5e9" stroke="#4caf50"/>
+  <text x="135" y="107" text-anchor="middle" font-size="10">InputForm</text>
+  <rect x="180" y="90" width="75" height="25" fill="#e8f5e9" stroke="#4caf50"/>
+  <text x="217" y="107" text-anchor="middle" font-size="10">ResultSection</text>
+  <rect x="20" y="120" width="80" height="25" fill="#e8f5e9" stroke="#4caf50"/>
+  <text x="60" y="137" text-anchor="middle" font-size="10">HistoryPanel</text>
+  <rect x="110" y="120" width="70" height="25" fill="#e8f5e9" stroke="#4caf50"/>
+  <text x="145" y="137" text-anchor="middle" font-size="10">Footer</text>
+
+  <line x1="160" y1="75" x2="55" y2="88" stroke="#999" marker-end="url(#arrow_small)"/>
+  <line x1="160" y1="75" x2="135" y2="88" stroke="#999" marker-end="url(#arrow_small)"/>
+  <line x1="160" y1="75" x2="217" y2="88" stroke="#999" marker-end="url(#arrow_small)"/>
+  <line x1="160" y1="75" x2="60" y2="118" stroke="#999" marker-end="url(#arrow_small)"/>
+  <line x1="160" y1="75" x2="145" y2="118" stroke="#999" marker-end="url(#arrow_small)"/>
+
+  <!-- Hooks group -->
+  <rect x="370" y="10" width="130" height="100" fill="#f0f4f8" stroke="#ccc" rx="5"/>
+  <text x="375" y="30" font-size="12" fill="#666">Hooks</text>
+
+  <rect x="385" y="45" width="100" height="20" fill="#fff3e0" stroke="#ff9800"/>
+  <text x="435" y="59" text-anchor="middle" font-size="10">useQuota</text>
+  <rect x="385" y="68" width="100" height="20" fill="#fff3e0" stroke="#ff9800"/>
+  <text x="435" y="82" text-anchor="middle" font-size="10">useHistory</text>
+  <rect x="385" y="88" width="100" height="20" fill="#fff3e0" stroke="#ff9800"/>
+  <text x="435" y="102" text-anchor="middle" font-size="10">useToast</text>
+
+  <!-- Utils group -->
+  <rect x="370" y="120" width="130" height="70" fill="#f0f4f8" stroke="#ccc" rx="5"/>
+  <text x="375" y="138" font-size="12" fill="#666">Utils</text>
+
+  <rect x="385" y="148" width="100" height="18" fill="#f3e5f5" stroke="#9c27b0"/>
+  <text x="435" y="161" text-anchor="middle" font-size="10">api.ts</text>
+  <rect x="385" y="168" width="100" height="18" fill="#f3e5f5" stroke="#9c27b0"/>
+  <text x="435" y="181" text-anchor="middle" font-size="10">storage.ts</text>
+
+  <!-- Backend -->
+  <rect x="540" y="148" width="50" height="25" fill="#e8eaf6" stroke="#3f51b5"/>
+  <text x="565" y="165" text-anchor="middle" font-size="10">Backend</text>
+
+  <!-- localStorage -->
+  <rect x="540" y="178" width="50" height="20" fill="#e8eaf6" stroke="#3f51b5"/>
+  <text x="565" y="192" text-anchor="middle" font-size="9">localStorage</text>
+
+  <!-- Connections -->
+  <line x1="170" y1="102" x2="383" y2="55" stroke="#999" stroke-dasharray="4" marker-end="url(#arrow_small)"/>
+  <line x1="255" y1="102" x2="383" y2="78" stroke="#999" stroke-dasharray="4" marker-end="url(#arrow_small)"/>
+  <line x1="170" y1="102" x2="383" y2="98" stroke="#999" stroke-dasharray="4" marker-end="url(#arrow_small)"/>
+  <line x1="255" y1="102" x2="383" y2="157" stroke="#999" stroke-dasharray="4" marker-end="url(#arrow_small)"/>
+  <line x1="100" y1="132" x2="383" y2="177" stroke="#999" stroke-dasharray="4" marker-end="url(#arrow_small)"/>
+  <line x1="485" y1="157" x2="538" y2="158" stroke="#333" marker-end="url(#arrow_small)"/>
+  <line x1="485" y1="177" x2="538" y2="185" stroke="#333" marker-end="url(#arrow_small)"/>
+
+  <defs>
+    <marker id="arrow_small" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#333"/>
+    </marker>
+  </defs>
+</svg>
+
+<h2>技术栈</h2>
+<table>
+<tr><th>Layer</th><th>Tech</th></tr>
+<tr><td>Framework</td><td>React 18 + TypeScript</td></tr>
+<tr><td>Build</td><td>Vite</td></tr>
+<tr><td>Style</td><td>CSS</td></tr>
+<tr><td>State</td><td>React Hooks</td></tr>
+<tr><td>Storage</td><td>localStorage</td></tr>
+<tr><td>Deploy</td><td>Vercel</td></tr>
+</table>
+
+</body>
+</html>

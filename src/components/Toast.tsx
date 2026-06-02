@@ -6,7 +6,7 @@ interface ToastProps {
 }
 
 const typeStyles: Record<ToastMessage['type'], string> = {
-  success: 'bg-gradient-to-r from-pink-500 to-rose-500 text-white',
+  success: 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white',
   error: 'bg-gradient-to-r from-red-500 to-red-600 text-white',
   warning: 'bg-gradient-to-r from-amber-400 to-orange-400 text-white',
 }

@@ -5,7 +5,7 @@ interface InviteShareProps {
   bonusCount: number
 }
 
-const SITE_URL = 'https://2425571995-dot.github.io/xhs-app-writer/'
+const SITE_URL = 'https://2425571995-dot.github.io/biguo-ai/'
 
 export default function InviteShare({ onCopyShareLink, bonusCount }: InviteShareProps) {
   const refCode = getShareReferralCode()
@@ -17,23 +17,22 @@ export default function InviteShare({ onCopyShareLink, bonusCount }: InviteShare
   }
 
   return (
-    <div className="mx-auto px-6 mb-6 mt-6">
-      <div className="rounded-2xl bg-gradient-to-r from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 border border-pink-100 dark:border-gray-700 p-5">
-        <div className="flex flex-col sm:flex-row items-center gap-4">
+    <div className="mt-6">
+      <div className="rounded-2xl border border-indigo-100 dark:border-gray-700 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/10 dark:to-purple-900/10 p-4 sm:p-5">
+        <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
           <div className="flex-1 text-center sm:text-left">
-            <p className="text-sm font-semibold text-pink-700 dark:text-pink-400 mb-1">🎁 邀请好友，双方各得3次免费额度！</p>
+            <p className="text-sm font-semibold text-indigo-700 dark:text-indigo-400 mb-1">🎁 分享得 +3 次免费额度</p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              分享你的专属链接，每成功邀请1位好友访问，你和好友各获得3次免费生成机会
-              {bonusCount > 0 && <span className="ml-1 text-pink-500 font-medium">（已获赠 {bonusCount} 次）</span>}
+              分享给好友，你和好友各获得 3 次免费降重机会
+              {bonusCount > 0 && <span className="ml-1 text-indigo-500 font-medium">（已获赠 {bonusCount} 次）</span>}
             </p>
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 break-all">专属链接：{shareUrl}</p>
           </div>
           <div className="flex gap-2 shrink-0">
             <button
               onClick={handleCopy}
-              className="cursor-pointer rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 px-5 py-2.5 text-sm font-medium text-white shadow-md shadow-pink-200 dark:shadow-pink-900/30 transition-all hover:shadow-lg active:scale-95"
+              className="cursor-pointer rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-4 sm:px-5 py-2.5 text-sm font-medium text-white shadow-md shadow-indigo-200 dark:shadow-indigo-900/30 transition-all hover:shadow-lg active:scale-95"
             >
-              📤 复制链接分享
+              📤 分享链接
             </button>
           </div>
         </div>

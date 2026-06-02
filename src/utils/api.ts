@@ -1,4 +1,4 @@
-import { CORS_PROXIES, STYLE_MAP } from '../constants'
+import { CORS_PROXIES } from '../constants'
 import type { Post } from '../types'
 
 export async function fetchWithCORS(url: string, options: RequestInit = {}): Promise<Response> {
@@ -74,21 +74,58 @@ function extractPostsManually(text: string): Omit<Post, 'id'>[] {
   throw new Error('无法解析 AI 返回的 JSON，请重试')
 }
 
-export function buildPrompt(product: string, features: string, price: string, audienceText: string, style: string): string {
-  return `你是小红书爆款文案专家。根据以下产品信息，生成3条小红书风格的种草文案。
+export function buildThesisPrompt(text: string, intensity: string, mode: string): string {
+  const intensityMap: Record<string, string> = {
+    mild: '轻度降重：保持原文结构基本不变，仅微调句式，替换少量重复词汇',
+    moderate: '中度降重：调整句式结构，替换重复表达，优化语序，保留原意的同时降低重复率',
+    strong: '强力降重：大幅改写句式，深度优化表达，用同义替换和句型变换最大化降低重复率',
+  }
 
-产品：${product}
-卖点：${features || '请根据产品名称自行提炼'}
-价格：${price || '未提供'}
-目标人群：${audienceText}
-风格要求：${STYLE_MAP[style]}
+  let instruction = ''
+  switch (mode) {
+    case '润色':
+      instruction = '请对以下论文段落进行润色，优化语法和表达，使语言更加流畅、规范、学术化。'
+      break
+    case '改写':
+      instruction = '请对以下论文段落进行改写，用不同的表达方式重新组织语言，保持原意不变。'
+      break
+    case '翻译':
+      instruction = '请将以下中文论文段落翻译成英文，保持学术语言的准确性和规范性。'
+      break
+    case '扩写':
+      instruction = '请对以下论文段落进行扩写，在保留原意的基础上补充相关论述，使内容更加充实。'
+      break
+    case '转为学术':
+      instruction = '请将以下论文段落改写得更加学术化，使用更正式、专业的学术表达，提升论文的学术水准。'
+      break
+    default:
+      instruction = `请对以下论文段落进行降重处理。要求：${intensityMap[intensity] || intensityMap.moderate}`
+  }
+
+  return `你是一个专业的论文降重和学术写作助手。${instruction}
 
 要求：
-- 每条文案包含：吸睛标题、正文（150-300字）、3-5个话题标签
-- 语气自然亲切，像真实用户分享而非广告
-- 善用emoji，但不能过度
-- 包含具体使用场景和真实感受
+1. 保留原文的核心观点和逻辑结构
+2. 不改变专业术语和关键数据
+3. 仅输出降重/处理后的文本，不要输出额外解释
+4. 保持学术写作的规范性和严谨性
+5. 如果原文包含引文或参考文献标记，请保留原格式
 
-请严格按照以下JSON格式输出，不要输出其他内容。正文中的双引号必须转义，换行用\n表示：
-[{"title":"标题","content":"正文内容","tags":["标签1","标签2","标签3"]}]`
+原文：
+${text}`
+}
+
+export function buildContinuePrompt(text: string, instruction: string): string {
+  return `你是一个专业的论文降重和学术写作助手。
+
+请基于以下文本，${instruction}
+
+要求：
+1. 保留核心观点和逻辑结构
+2. 不改变专业术语和关键数据
+3. 仅输出处理后的文本，不要额外解释
+4. 保持学术写作的规范性和严谨性
+
+文本：
+${text}`
 }

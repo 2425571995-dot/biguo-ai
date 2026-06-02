@@ -1,42 +1,52 @@
 import { useState } from 'react'
-import { TEMPLATE_GROUPS } from '../constants'
-import type { Template } from '../types'
+import { FEATURE_BUTTONS, REVIEW_ITEMS } from '../constants'
 
 interface TemplatePresetsProps {
-  onSelect: (t: Template) => void
+  activeFeature: string
+  onFeatureChange: (key: string) => void
 }
 
-export default function TemplatePresets({ onSelect }: TemplatePresetsProps) {
-  const [expanded, setExpanded] = useState(false)
-
+export default function TemplatePresets({ activeFeature, onFeatureChange }: TemplatePresetsProps) {
   return (
-    <div className="mb-6 flex flex-wrap items-center gap-2">
-      <span className="text-sm text-gray-400 dark:text-gray-500">⚡ 快速填充：</span>
-      {TEMPLATE_GROUPS.map((group, gi) => {
-        if (gi === 0 || expanded) {
+    <div className="mb-5 space-y-4">
+      {/* 第一排：主功能按钮（降重/润色/改写/翻译/扩写） */}
+      <div className="flex flex-wrap gap-2 sm:gap-3">
+        {FEATURE_BUTTONS.map((btn) => {
+          const isActive = activeFeature === btn.key
           return (
-            <span key={group.label} className="contents">
-              {gi > 0 && <span className="text-xs text-gray-300 dark:text-gray-600 mx-1">|</span>}
-              {group.items.map((t) => (
-                <button
-                  key={t.label}
-                  onClick={() => onSelect(t)}
-                  className="cursor-pointer rounded-full border border-pink-200 dark:border-gray-600 px-3.5 py-1.5 text-sm text-pink-600 dark:text-pink-400 transition-all hover:bg-pink-50 dark:hover:bg-gray-700 hover:border-pink-300 active:scale-95"
-                >
-                  {t.label}
-                </button>
-              ))}
-            </span>
+            <button
+              key={btn.key}
+              onClick={() => onFeatureChange(btn.key)}
+              className={`cursor-pointer rounded-lg px-4 sm:px-5 py-2 text-sm sm:text-base font-medium transition-all active:scale-95 ${
+                isActive
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 dark:shadow-indigo-900/30'
+                  : 'border border-indigo-200 dark:border-gray-600 text-indigo-600 dark:text-indigo-400 bg-white dark:bg-gray-800 hover:bg-indigo-50 dark:hover:bg-gray-700'
+              }`}
+            >
+              {btn.label}
+            </button>
           )
-        }
-        return null
-      })}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="cursor-pointer rounded-full border border-dashed border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs text-gray-400 dark:text-gray-500 transition-all hover:border-pink-300 hover:text-pink-500"
-      >
-        {expanded ? '收起 ▲' : '更多品类 ▼'}
-      </button>
+        })}
+      </div>
+
+      {/* 第二排：提交前检查区 */}
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-xs text-gray-400 dark:text-gray-500 font-medium tracking-wide uppercase">提交前检查</span>
+          <div className="h-px flex-1 bg-gray-100 dark:bg-gray-700" />
+        </div>
+        <div className="flex flex-wrap gap-1.5 sm:gap-2">
+          {REVIEW_ITEMS.map((item) => (
+            <button
+              key={item.key}
+              onClick={() => {}}
+              className="cursor-pointer rounded-md border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 transition-colors hover:border-indigo-200 hover:text-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-gray-700 active:scale-95"
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

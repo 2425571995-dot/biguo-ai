@@ -1,8 +1,17 @@
+export type Intensity = 'mild' | 'moderate' | 'strong'
+
 export interface Post {
   id: number
   title: string
   content: string
-  tags: string[]
+  tags?: string[]
+}
+
+export interface ThesisResult {
+  id: number
+  original: string
+  content: string
+  changes: string
 }
 
 export interface SensitiveWord {

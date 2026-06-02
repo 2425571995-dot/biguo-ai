@@ -27,13 +27,13 @@ export default function UpgradeModal({ onContinue, onReset, onClose, onActivateC
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={onClose}>
-      <div className="animate-modal mx-4 w-full max-w-md rounded-2xl border border-pink-100 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+      <div className="animate-modal mx-4 w-full max-w-md rounded-2xl border border-indigo-100 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
         {/* 标题 */}
         <div className="mb-4 text-center">
-          <div className="mb-2 text-4xl">👑</div>
+          <div className="mb-2 text-4xl">📖</div>
           <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">今日免费次数已用尽</h2>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            每日免费 <strong className="text-pink-500">{DAILY_LIMIT} 次</strong>，升级会员无限使用
+            每日免费 <strong className="text-indigo-500">{DAILY_LIMIT} 次</strong>，升级会员无限使用
           </p>
         </div>
 
@@ -41,13 +41,13 @@ export default function UpgradeModal({ onContinue, onReset, onClose, onActivateC
         <div className="mb-4 flex rounded-xl bg-gray-100 dark:bg-gray-700 p-1">
           <button
             onClick={() => setTab('plans')}
-            className={`flex-1 rounded-lg py-2 text-sm font-medium transition-all cursor-pointer ${tab === 'plans' ? 'bg-white dark:bg-gray-600 text-pink-600 dark:text-pink-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
+            className={`flex-1 rounded-lg py-2 text-sm font-medium transition-all cursor-pointer ${tab === 'plans' ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
           >
             💎 升级会员
           </button>
           <button
             onClick={() => setTab('code')}
-            className={`flex-1 rounded-lg py-2 text-sm font-medium transition-all cursor-pointer ${tab === 'code' ? 'bg-white dark:bg-gray-600 text-pink-600 dark:text-pink-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
+            className={`flex-1 rounded-lg py-2 text-sm font-medium transition-all cursor-pointer ${tab === 'code' ? 'bg-white dark:bg-gray-600 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
           >
             🔑 卡密兑换
           </button>
@@ -60,10 +60,10 @@ export default function UpgradeModal({ onContinue, onReset, onClose, onActivateC
               {MEMBERSHIP_PLANS.map((plan) => (
                 <div
                   key={plan.id}
-                  className="relative rounded-xl border-2 border-pink-200 dark:border-gray-600 bg-gradient-to-r from-pink-50 to-rose-50 dark:from-pink-900/10 dark:to-rose-900/10 p-4 hover:border-pink-400 dark:hover:border-pink-500 transition-colors"
+                  className="relative rounded-xl border-2 border-indigo-200 dark:border-gray-600 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/10 dark:to-purple-900/10 p-4 hover:border-indigo-400 dark:hover:border-indigo-500 transition-colors"
                 >
                   {plan.badge && (
-                    <span className="absolute -top-2 right-3 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                    <span className="absolute -top-2 right-3 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 px-2 py-0.5 text-[10px] font-bold text-white">
                       {plan.badge}
                     </span>
                   )}
@@ -73,7 +73,7 @@ export default function UpgradeModal({ onContinue, onReset, onClose, onActivateC
                       <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{plan.desc}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-xl font-bold text-pink-600 dark:text-pink-400">{plan.price}</div>
+                      <div className="text-xl font-bold text-indigo-600 dark:text-indigo-400">{plan.price}</div>
                     </div>
                   </div>
                 </div>
@@ -81,7 +81,7 @@ export default function UpgradeModal({ onContinue, onReset, onClose, onActivateC
             </div>
 
             {/* 支付引导 */}
-            <div className="rounded-xl bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 border border-pink-200 dark:border-pink-800 p-4">
+            <div className="rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border border-indigo-200 dark:border-indigo-800 p-4">
               <div className="mb-3 text-center">
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-200">📱 扫码/搜索添加微信开通</span>
               </div>
@@ -95,7 +95,7 @@ export default function UpgradeModal({ onContinue, onReset, onClose, onActivateC
                 </div>
                 <button
                   onClick={handleCopyWechat}
-                  className="shrink-0 rounded-lg bg-pink-500 px-3 py-1.5 text-xs font-medium text-white transition-all hover:bg-pink-600 active:scale-95 cursor-pointer"
+                  className="shrink-0 rounded-lg bg-indigo-500 px-3 py-1.5 text-xs font-medium text-white transition-all hover:bg-indigo-600 active:scale-95 cursor-pointer"
                 >
                   {copied ? '✅ 已复制' : '复制'}
                 </button>
@@ -111,7 +111,7 @@ export default function UpgradeModal({ onContinue, onReset, onClose, onActivateC
         ) : (
           <>
             {/* 卡密兑换 */}
-            <div className="rounded-xl border border-pink-200 dark:border-gray-600 bg-pink-50 dark:bg-pink-900/20 p-4">
+            <div className="rounded-xl border border-indigo-200 dark:border-gray-600 bg-indigo-50 dark:bg-indigo-900/20 p-4">
               <div className="mb-3 text-center">
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-200">🔑 输入卡密激活会员</span>
               </div>
@@ -120,12 +120,12 @@ export default function UpgradeModal({ onContinue, onReset, onClose, onActivateC
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                   placeholder="请输入卡密..."
-                  className="flex-1 rounded-lg border border-pink-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:border-pink-400 focus:ring-2 focus:ring-pink-200 outline-none transition-all"
+                  className="flex-1 rounded-lg border border-indigo-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
                   onKeyDown={(e) => e.key === 'Enter' && handleActivate()}
                 />
                 <button
                   onClick={handleActivate}
-                  className="shrink-0 rounded-lg bg-gradient-to-r from-pink-500 to-rose-500 px-5 py-2.5 text-sm font-medium text-white transition-all hover:shadow-lg active:scale-95 cursor-pointer"
+                  className="shrink-0 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 px-5 py-2.5 text-sm font-medium text-white transition-all hover:shadow-lg active:scale-95 cursor-pointer"
                 >
                   兑换
                 </button>
@@ -141,13 +141,13 @@ export default function UpgradeModal({ onContinue, onReset, onClose, onActivateC
         <div className="mt-4 flex gap-2">
           <button
             onClick={onContinue}
-            className="flex-1 cursor-pointer rounded-xl border border-gray-200 dark:border-gray-600 px-4 py-2.5 text-sm text-pink-600 dark:text-pink-400 transition-colors hover:bg-pink-50 dark:hover:bg-gray-700"
+            className="flex-1 cursor-pointer rounded-xl border border-gray-200 dark:border-gray-600 px-4 py-2.5 text-sm text-indigo-600 dark:text-indigo-400 transition-colors hover:bg-indigo-50 dark:hover:bg-gray-700"
           >
             继续生成
           </button>
           <button
             onClick={onReset}
-            className="flex-1 cursor-pointer rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 px-4 py-2.5 text-sm text-white shadow-lg shadow-pink-200 dark:shadow-pink-900/30 transition-all hover:shadow-xl"
+            className="flex-1 cursor-pointer rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-2.5 text-sm text-white shadow-lg shadow-indigo-200 dark:shadow-indigo-900/30 transition-all hover:shadow-xl"
           >
             重置次数
           </button>

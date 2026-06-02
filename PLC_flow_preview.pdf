@@ -1,0 +1,86 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 842 595] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+6 0 obj
+<< /Length 2284 >>
+stream
+BT /F2 24 Tf 1 0 0 1 185 560 Tm (PLC???????????) Tj ET
+BT /F1 10 Tf 1 0 0 1 215 540 Tm (????? | ??? PLC ????????????) Tj ET
+0 0 0 RG 1 w 30 60 240 440 re S
+0 0 0 RG 1 w 295 60 240 440 re S
+0 0 0 RG 1 w 560 60 240 440 re S
+BT /F1 13 Tf 1 0 0 1 105 470 Tm (??????????) Tj ET
+BT /F1 12 Tf 1 0 0 1 115 440 Tm (??) Tj ET
+0 0 0 RG 1 w 100 425 140 26 re S
+BT /F1 11 Tf 1 0 0 1 92 390 Tm (????) Tj ET
+0 0 0 RG 1 w 80 375 180 26 re S
+BT /F1 11 Tf 1 0 0 1 90 350 Tm (PLC??? / ??????) Tj ET
+0 0 0 RG 1 w 72 335 196 26 re S
+BT /F1 10 Tf 1 0 0 1 68 300 Tm (??????????????) Tj ET
+0 0 0 RG 1 w 60 285 220 26 re S
+BT /F1 11 Tf 1 0 0 1 115 245 Tm (? ? ?????) Tj ET
+0 0 0 RG 1 w 70 230 200 26 re S
+BT /F1 11 Tf 1 0 0 1 108 190 Tm (??????) Tj ET
+0 0 0 RG 1 w 76 175 188 26 re S
+BT /F1 11 Tf 1 0 0 1 108 130 Tm (? ? ??????) Tj ET
+BT /F1 13 Tf 1 0 0 1 375 470 Tm (??????) Tj ET
+BT /F1 11 Tf 1 0 0 1 364 440 Tm (? / ????) Tj ET
+0 0 0 RG 1 w 345 425 140 26 re S
+BT /F1 11 Tf 1 0 0 1 358 390 Tm (??) Tj ET
+BT /F1 11 Tf 1 0 0 1 455 390 Tm (??) Tj ET
+BT /F1 11 Tf 1 0 0 1 340 350 Tm (????????) Tj ET
+0 0 0 RG 1 w 330 335 170 26 re S
+BT /F1 10 Tf 1 0 0 1 340 300 Tm (???? / ?? / ??) Tj ET
+0 0 0 RG 1 w 322 285 186 26 re S
+BT /F1 11 Tf 1 0 0 1 342 245 Tm (????????) Tj ET
+0 0 0 RG 1 w 332 230 166 26 re S
+BT /F1 11 Tf 1 0 0 1 338 190 Tm (?????? AI01) Tj ET
+0 0 0 RG 1 w 335 175 160 26 re S
+BT /F1 10 Tf 1 0 0 1 330 130 Tm (??????????) Tj ET
+0 0 0 RG 1 w 320 115 190 26 re S
+BT /F1 13 Tf 1 0 0 1 640 470 Tm (?????????) Tj ET
+BT /F1 11 Tf 1 0 0 1 628 440 Tm (???? / ???????) Tj ET
+0 0 0 RG 1 w 615 425 190 26 re S
+BT /F1 10 Tf 1 0 0 1 620 390 Tm (PID????????????) Tj ET
+0 0 0 RG 1 w 612 375 200 26 re S
+BT /F1 10 Tf 1 0 0 1 628 330 Tm (???????????) Tj ET
+0 0 0 RG 1 w 612 315 200 26 re S
+BT /F1 11 Tf 1 0 0 1 642 275 Tm (???????) Tj ET
+0 0 0 RG 1 w 624 260 176 26 re S
+BT /F1 10 Tf 1 0 0 1 628 215 Tm (????????????) Tj ET
+0 0 0 RG 1 w 612 200 200 26 re S
+BT /F1 11 Tf 1 0 0 1 642 160 Tm (?????) Tj ET
+0 0 0 RG 1 w 628 145 164 26 re S
+BT /F1 10 Tf 1 0 0 1 636 105 Tm (???? / ????????) Tj ET
+0 0 0 RG 1 w 610 90 202 26 re S
+BT /F1 9 Tf 1 0 0 1 55 20 Tm (?????????????????????????????????????????) Tj ET
+BT /F1 9 Tf 1 0 0 1 55 8 Tm (?????DI01 ???DI02 ????DI03 ???AI01 ?????DO01-DO03 ?????DO04 ???????AO01 ?????) Tj ET
+endstream
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000251 00000 n 
+0000000321 00000 n 
+0000000396 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+2732
+%%EOF
