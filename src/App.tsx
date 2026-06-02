@@ -190,22 +190,35 @@ AI会根据你提供的论文内容，逐项检查盲审常见扣分点。`,
 const ALL_TABS = [...CORE_TABS, ...REVIEW_TABS]
 
 // ====== Config ======
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.deepseek.com/v1'
 const MODEL = import.meta.env.VITE_MODEL || 'deepseek-chat'
 const FREE_DAILY_LIMIT = 5
-const FREE_CHAR_LIMIT = 800
-const VIP_CHAR_LIMIT = 2000
+const CHAR_LIMIT = 2000
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
+
+// Storage keys
 const STORAGE_KEY_USAGE = 'biguoai_usage'
 const STORAGE_KEY_BONUS = 'biguoai_bonus'
 const STORAGE_KEY_VIP = 'biguoai_vip'
-const STORAGE_KEY_API = 'biguoai_apikey'
 const STORAGE_KEY_VIP_CODE = 'biguoai_vipcode'
 const STORAGE_KEY_USER_ID = 'biguoai_uid'
 const STORAGE_KEY_SHARED_COUNT = 'biguoai_shared'
 
+// New storage keys
+const STORAGE_KEY_DEEPSEEK_BASE = 'deepseek_api_base_url'
+const STORAGE_KEY_DEEPSEEK_KEY = 'deepseek_api_key'
+const STORAGE_KEY_GUIDE = 'hasSeenKeyGuide'
+const STORAGE_KEY_DEMO = 'demo_mode_enabled'
+
+const DEFAULT_API_BASE = 'https://api.deepseek.com'
+
 // 默认激活码（你可以随时改这个）
 const DEFAULT_VIP_CODE = 'biguo2026'
+
+// Demo data
+const DEMO_INPUT = '随着互联网技术的快速发展，人工智能在教育领域中的应用越来越广泛。通过对学习数据的分析，人工智能能够为学生提供更加个性化的学习建议，从而提高学习效率和教学质量。'
+const DEMO_OUTPUT = '随着互联网技术的持续进步，人工智能在教育场景中的应用范围不断扩大。借助对学习行为和相关数据的分析，人工智能能够为学生提供更具针对性的学习建议，从而在一定程度上提升学习效率与教学质量。'
+const DEMO_NOTE = '已调整句式结构，替换部分重复表达，并增强了论文表述的自然度和学术感。'
+const CORE_PLACEHOLDER = '粘贴需要降重的论文段落，建议 100–800 字。\n\nAI 将在保留原意的基础上调整句式、替换重复表达，并优化为更自然的学术表达。'
 
 // ====== Helpers ======
 function getTodayStr(): string {
@@ -265,14 +278,6 @@ function saveVip(days: number) {
   localStorage.setItem(STORAGE_KEY_VIP, JSON.stringify({ expires: Date.now() + days * 86400000 }))
 }
 
-function getSavedApiKey(): string {
-  return localStorage.getItem(STORAGE_KEY_API) || ''
-}
-
-function setSavedApiKey(key: string) {
-  localStorage.setItem(STORAGE_KEY_API, key)
-}
-
 function getCurrentVipCode(): string {
   return localStorage.getItem(STORAGE_KEY_VIP_CODE) || DEFAULT_VIP_CODE
 }
@@ -317,8 +322,6 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'warning' } | null>(null)
   const [showPayment, setShowPayment] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
-  const [apiKey, setApiKey] = useState(() => getSavedApiKey())
   const [, forceUpdate] = useState(0)
   const [vip, setVip] = useState(isVip())
   const [verifyCode, setVerifyCode] = useState('')
@@ -332,6 +335,19 @@ export default function App() {
   const [shareCopied, setShareCopied] = useState(false)
   const logoClicks = useRef(0)
 
+  // New states for API Key guide & Demo mode
+  const [savedApiKey, setSavedApiKey] = useState(() => localStorage.getItem(STORAGE_KEY_DEEPSEEK_KEY) || '')
+  const [savedApiBase, setSavedApiBase] = useState(() => localStorage.getItem(STORAGE_KEY_DEEPSEEK_BASE) || DEFAULT_API_BASE)
+  const [demoMode, setDemoMode] = useState(() => localStorage.getItem(STORAGE_KEY_DEMO) === 'true')
+  const [showConfig, setShowConfig] = useState(false)
+  const [configMode, setConfigMode] = useState<'firstTime' | 'settings'>('settings')
+  const [configApiKey, setConfigApiKey] = useState('')
+  const [configApiBase, setConfigApiBase] = useState(DEFAULT_API_BASE)
+  const [configShowPwd, setConfigShowPwd] = useState(false)
+  const [showApiKeyPrompt, setShowApiKeyPrompt] = useState(false)
+  const [intensity, setIntensity] = useState('中度')
+  const [modifyNote, setModifyNote] = useState('')
+
   const siteUrl = window.location.origin + window.location.pathname
   const shareLink = siteUrl + '?ref=' + getUserShareId()
 
@@ -344,6 +360,53 @@ export default function App() {
   const refreshUsage = useCallback(() => {
     forceUpdate(n => n + 1)
     setVip(isVip())
+  }, [])
+
+  const openConfig = useCallback((mode: 'firstTime' | 'settings') => {
+    setConfigMode(mode)
+    setConfigApiKey(mode === 'settings' ? savedApiKey : '')
+    setConfigApiBase(mode === 'settings' ? savedApiBase : DEFAULT_API_BASE)
+    setConfigShowPwd(false)
+    setShowApiKeyPrompt(false)
+    setShowConfig(true)
+  }, [savedApiKey, savedApiBase])
+
+  const saveConfig = useCallback(() => {
+    localStorage.setItem(STORAGE_KEY_DEEPSEEK_KEY, configApiKey)
+    localStorage.setItem(STORAGE_KEY_DEEPSEEK_BASE, configApiBase)
+    localStorage.setItem(STORAGE_KEY_GUIDE, 'true')
+    setSavedApiKey(configApiKey)
+    setSavedApiBase(configApiBase)
+    setShowConfig(false)
+    if (configApiKey) {
+      showToast('API Key 已保存', 'success')
+    } else {
+      showToast('配置已保存', 'success')
+    }
+  }, [configApiKey, configApiBase, showToast])
+
+  const clearConfig = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEY_DEEPSEEK_KEY)
+    localStorage.removeItem(STORAGE_KEY_DEEPSEEK_BASE)
+    localStorage.removeItem(STORAGE_KEY_DEMO)
+    setSavedApiKey('')
+    setSavedApiBase(DEFAULT_API_BASE)
+    setDemoMode(false)
+    setShowConfig(false)
+    showToast('配置已清除', 'success')
+  }, [showToast])
+
+  const enableDemoAndClose = useCallback(() => {
+    localStorage.setItem(STORAGE_KEY_DEMO, 'true')
+    localStorage.setItem(STORAGE_KEY_GUIDE, 'true')
+    setDemoMode(true)
+    setShowConfig(false)
+    showToast('🎪 已切换到 Demo 模式', 'success')
+  }, [showToast])
+
+  const dismissGuide = useCallback(() => {
+    localStorage.setItem(STORAGE_KEY_GUIDE, 'true')
+    setShowConfig(false)
   }, [])
 
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -372,10 +435,11 @@ export default function App() {
 
     // Validate
     if (!text && !imagePreview) {
-      showToast(currentTab.needsImage ? '请先上传截图或输入说明' : '请先输入需要处理的文本', 'warning')
+      showToast(currentTab.needsImage ? '请先上传截图或输入说明' : '请先粘贴需要降重的论文段落', 'warning')
       return
     }
 
+    // Check daily limit
     if (!vip) {
       const used = getUsage()
       if (used >= getTotalDailyLimit()) {
@@ -384,18 +448,40 @@ export default function App() {
       }
     }
 
-    const key = apiKey
-    if (!key) {
-      showToast('请先设置 API Key', 'warning')
-      setShowSettings(true)
+    // Demo mode — return preset results
+    if (demoMode) {
+      if (text === DEMO_INPUT) {
+        setOutput(DEMO_OUTPUT)
+        setModifyNote(DEMO_NOTE)
+      } else {
+        setOutput('这是 Demo 模式示例结果。配置 DeepSeek API Key 后，即可处理你输入的真实论文内容。\n\n' + DEMO_OUTPUT)
+        setModifyNote(DEMO_NOTE)
+      }
+      if (!vip) {
+        incrementUsage()
+        refreshUsage()
+      }
+      showToast('Demo 模式演示结果 🎉', 'success')
       return
     }
 
+    // Check API Key
+    if (!savedApiKey) {
+      setShowApiKeyPrompt(true)
+      return
+    }
+
+    setShowApiKeyPrompt(false)
     setLoading(true)
     setOutput('')
 
     try {
-      // Build multimodal content for vision tabs
+      // Build API URL
+      let baseUrl = (savedApiBase || DEFAULT_API_BASE).replace(/\/+$/, '')
+      if (!baseUrl.endsWith('/v1')) baseUrl += '/v1'
+      const apiUrl = `${baseUrl}/chat/completions`
+
+      // Build messages
       const messages: any[] = []
       let userContent: any[]
 
@@ -405,24 +491,33 @@ export default function App() {
           { type: 'image_url', image_url: { url: imagePreview } },
         ]
       } else {
+        // Add intensity instruction for jiangchong tab
+        let systemPrompt = currentTab.systemPrompt
+        if (tab === 'jiangchong' && intensity !== '中度') {
+          const intensityMap: Record<string, string> = {
+            '轻度': '\n\n【强度要求】轻度降重：轻微调整句式，保持原文风格，降重率约10-20%。',
+            '强力': '\n\n【强度要求】强力降重：大幅改写句式，彻底重组语序，降重率约50-70%。',
+          }
+          systemPrompt += intensityMap[intensity] || ''
+        }
         userContent = [
-          { type: 'text', text: currentTab.systemPrompt + '\n\n' + text },
+          { type: 'text', text: systemPrompt + '\n\n' + text },
         ]
       }
 
       messages.push({ role: 'user', content: userContent })
 
-      const res = await fetch(`${API_BASE}/chat/completions`, {
+      const res = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${key}`,
+          'Authorization': `Bearer ${savedApiKey}`,
         },
         body: JSON.stringify({
           model: MODEL,
           messages,
           max_tokens: 4096,
-          temperature: 0.7,
+          temperature: intensity === '强力' ? 0.9 : intensity === '轻度' ? 0.5 : 0.7,
         }),
       })
 
@@ -436,6 +531,7 @@ export default function App() {
       if (!result) throw new Error('API返回为空，请重试')
 
       setOutput(result)
+      setModifyNote('已优化句式结构、替换重复表达，并尽量保留原文含义。')
 
       if (!vip) {
         incrementUsage()
@@ -444,36 +540,33 @@ export default function App() {
 
       showToast('处理完成！ 🎉', 'success')
     } catch (err: any) {
-      showToast(err.message || '处理失败，请重试', 'error')
+      showToast('处理失败，请检查 API Key 是否正确，或稍后重试。', 'error')
     } finally {
       setLoading(false)
     }
-  }, [input, imagePreview, vip, apiKey, currentTab, showToast, refreshUsage])
+  }, [input, imagePreview, vip, savedApiKey, savedApiBase, currentTab, showToast, refreshUsage, demoMode, tab, intensity])
 
-  const handleCopy = useCallback(async (withFooter = false) => {
+  const handleCopy = useCallback(async () => {
     if (!output) return
     try {
-      let text = output
-      if (withFooter) {
-        text += '\n\n—— 由毕过AI生成 (免费论文降重/润色/盲审工具)\n' + siteUrl
-      }
-      await navigator.clipboard.writeText(text)
+      await navigator.clipboard.writeText(output)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-      showToast('已复制' + (withFooter ? '（含来源链接）' : ''), 'success')
+      showToast('已复制到剪贴板', 'success')
     } catch {
       showToast('复制失败，请手动选择复制', 'error')
     }
-  }, [output, showToast, siteUrl])
+  }, [output, showToast])
 
-  // Reset output when tab changes
+  // Reset state when tab changes
   useEffect(() => {
     setOutput('')
     setInput('')
+    setModifyNote('')
     handleRemoveImage()
   }, [tab]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // On mount: check URL for VIP code or referral
+  // On mount: check URL params and show first-time guide
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const codeFromUrl = params.get('vip')
@@ -481,7 +574,7 @@ export default function App() {
       setCurrentVipCode(codeFromUrl)
       showToast('欢迎使用毕过AI！每天免费5次 🎉', 'success')
     }
-    // Referral tracking: visitor comes from a friend's share link
+    // Referral tracking
     const ref = params.get('ref')
     if (ref && ref.length >= 4) {
       const visitedKey = 'biguoai_ref_visited_' + ref
@@ -490,6 +583,11 @@ export default function App() {
         addBonusUses(3)
         showToast('🎉 通过好友链接进入，已获得 +3 次免费机会！', 'success')
       }
+    }
+
+    // First-time guide popup
+    if (!savedApiKey && !localStorage.getItem(STORAGE_KEY_GUIDE)) {
+      openConfig('firstTime')
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -501,28 +599,40 @@ export default function App() {
     <>
       {toast && <Toast msg={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
 
-      {/* Header */}
+      {/* ===== Header ===== */}
       <header className="header">
         <div className="header-left">
           <div className="header-logo" onClick={() => { logoClicks.current++; if (logoClicks.current >= 5) { setShowAdmin(true); logoClicks.current = 0 } }} style={{ cursor: 'pointer' }}>毕</div>
-          <div className="header-title">
-            毕过<span>AI</span>
-            <span className="header-badge">{remaining >= 0 ? `免费 ${remaining}次` : '免费'}</span>
+          <div>
+            <div className="header-title">
+              毕过<span>AI</span>
+              <span className="header-badge">{vip ? '无限次' : '每日免费 5 次'}</span>
+            </div>
+            <div className="header-subtitle">保留原意，优化句式，降低重复表达</div>
           </div>
-          <div className="header-subtitle">保留原意，优化句式，降低重复表达</div>
         </div>
-        <button className="settings-btn" onClick={() => setShowSettings(true)}>
+        <button className="settings-btn" onClick={() => openConfig('settings')}>
           ⚙️ 设置
         </button>
       </header>
 
-      {/* Info Banner */}
+      {/* ===== Info Banner ===== */}
       <div className="info-banner">
         <span>🎓</span>
         <div>
           论文初稿别急着提交：先降重、再润色、最后做提交前检查。今日免费 <strong>{FREE_DAILY_LIMIT} 次</strong>，分享好友 +3 次 👇
         </div>
       </div>
+
+      {/* ===== Demo Mode Banner ===== */}
+      {demoMode && (
+        <div className="demo-banner">
+          <span>🎪 当前为 Demo 模式：可体验降重效果示例，配置 DeepSeek API Key 后可处理真实论文内容。</span>
+          <button className="demo-config-btn" onClick={() => openConfig('settings')}>
+            立即配置 Key
+          </button>
+        </div>
+      )}
 
       {/* ===== Core Tabs ===== */}
       <div className="tabs">
@@ -551,16 +661,17 @@ export default function App() {
         ))}
       </div>
 
-      {/* ===== Input Area ===== */}
-      <div className="card">
-        <div className="card-title">
+      {/* ===== Main Consolidated Card ===== */}
+      <div className="card main-card">
+        {/* Card Title + Paste Example */}
+        <div className="card-title" style={{ marginBottom: 0 }}>
           <span>{isReviewTab ? '🔍' : '📝'}</span>
-          {isReviewTab ? `${currentTab.label}` : `输入论文段落`}
+          {isReviewTab ? `${currentTab.label}` : '输入论文段落'}
           {!isReviewTab && (
             <button
               className="btn-paste-example"
               onClick={() => {
-                setInput(`随着互联网技术的快速发展，人工智能在教育领域中的应用越来越广泛。通过对学习数据的分析，人工智能能够为学生提供更加个性化的学习建议，从而提高学习效率和教学质量。`)
+                setInput(DEMO_INPUT)
                 showToast('📋 已填入示例文本', 'success')
               }}
             >
@@ -571,7 +682,7 @@ export default function App() {
 
         {/* Image Upload (for vision tabs) */}
         {currentTab.needsImage && (
-          <div className="image-upload-area">
+          <div className="image-upload-area" style={{ marginBottom: 0 }}>
             {!imagePreview ? (
               <div className="image-upload-placeholder" onClick={() => fileInputRef.current?.click()}>
                 <div className="upload-icon">📤</div>
@@ -594,113 +705,149 @@ export default function App() {
           </div>
         )}
 
-        {/* Text Input (always visible but optional for vision tabs) */}
+        {/* Textarea */}
         <textarea
           className={`text-input${loading ? ' dimmed' : ''}`}
           value={input}
           onChange={e => setInput(e.target.value)}
-          placeholder={currentTab.placeholder}
+          placeholder={isReviewTab ? currentTab.placeholder : CORE_PLACEHOLDER}
           disabled={loading}
-          maxLength={vip ? VIP_CHAR_LIMIT : FREE_CHAR_LIMIT}
-          style={{ minHeight: currentTab.needsImage ? 80 : 180 }}
+          maxLength={CHAR_LIMIT}
+          style={{ minHeight: currentTab.needsImage ? 80 : 170 }}
         />
+
+        {/* Char Count */}
         {!currentTab.needsImage && (
-          <div className={`char-count${input.length > (vip ? VIP_CHAR_LIMIT : FREE_CHAR_LIMIT) ? ' over' : ''}`}>
-            {input.length} / {vip ? VIP_CHAR_LIMIT : FREE_CHAR_LIMIT} 字，建议 100–800 字
-            {input.length > (vip ? VIP_CHAR_LIMIT : FREE_CHAR_LIMIT) && (
-              <span className="char-over-warning">⚠️ 内容过长，建议分段处理</span>
+          <div className={`char-count${input.length > CHAR_LIMIT ? ' over' : ''}`}>
+            {input.length} / {CHAR_LIMIT} 字，建议 100–800 字
+            {input.length > CHAR_LIMIT && (
+              <span className="char-over-warning">⚠️ 内容过长，建议分段处理，效果更稳定</span>
             )}
           </div>
         )}
-      </div>
 
-      {/* ===== 降重强度 (仅核心标签) ===== */}
-      {!isReviewTab && (
-        <div className="intensity-section">
-          <div className="intensity-row">
-            <span className="intensity-label">降重强度</span>
-            <div className="intensity-options">
-              {['轻度', '中度', '强力'].map((level, i) => (
+        {/* Intensity & Output Style (core tabs only) */}
+        {!isReviewTab && (
+          <>
+            <div className="intensity-row">
+              <span className="intensity-label">降重强度</span>
+              <div className="intensity-options">
+                {['轻度', '中度', '强力'].map((level) => (
                   <button
                     key={level}
-                    className={`intensity-btn${i === 1 ? ' active' : ''}`}
+                    className={`intensity-btn${intensity === level ? ' active' : ''}`}
                     onClick={() => {
+                      setIntensity(level)
                       showToast(`已选择「${level}」降重`, 'success')
                     }}
                   >
                     {level}
                   </button>
-              ))}
+                ))}
+              </div>
+            </div>
+            <div className="intensity-row" style={{ marginBottom: 0 }}>
+              <span className="intensity-label">输出风格</span>
+              <span className="output-style-display">本科论文</span>
+            </div>
+          </>
+        )}
+
+        {/* Privacy Notice */}
+        <div className="privacy-notice" style={{ marginTop: 0, marginBottom: 0 }}>
+          🔒 请勿输入涉密内容，文本仅用于本次处理展示
+        </div>
+
+        {/* Main Button */}
+        <button
+          className={`btn-primary${loading ? ' loading' : ''}`}
+          onClick={handleProcess}
+          disabled={loading || (!input.trim() && !imagePreview) || input.length > CHAR_LIMIT}
+        >
+          {loading
+            ? '🤖 正在降重中...'
+            : isReviewTab
+              ? currentTab.btnLabel
+              : '🚀 开始智能降重，保留原意'}
+        </button>
+
+        {/* Button Hint */}
+        {!loading && (
+          <div className="btn-hint" style={{ marginTop: 0 }}>预计 10–20 秒生成结果</div>
+        )}
+
+        {/* API Key Prompt (inline warning) */}
+        {showApiKeyPrompt && (
+          <div className="api-key-prompt">
+            <p>请先配置 DeepSeek API Key，或使用 Demo 模式体验。</p>
+            <div className="api-key-prompt-buttons">
+              <button onClick={() => { setShowApiKeyPrompt(false); openConfig('settings') }}>
+                🔑 配置 API Key
+              </button>
+              <button onClick={() => { setShowApiKeyPrompt(false); localStorage.setItem(STORAGE_KEY_DEMO, 'true'); setDemoMode(true); showToast('🎪 已切换到 Demo 模式', 'success') }}>
+                🎪 体验 Demo 模式
+              </button>
             </div>
           </div>
-          <div className="intensity-row">
-            <span className="intensity-label">输出风格</span>
-            <span className="output-style-display">本科论文</span>
-          </div>
-        </div>
-      )}
-
-      {/* ===== Process Button ===== */}
-      <button
-        className={`btn-primary${loading ? ' loading' : ''}`}
-        onClick={handleProcess}
-        disabled={loading || (!input.trim() && !imagePreview) || input.length > (vip ? VIP_CHAR_LIMIT : FREE_CHAR_LIMIT)}
-      >
-        {loading
-          ? '🤖 AI 处理中，请稍候...'
-          : currentTab.btnLabel}
-      </button>
-      {!loading && (
-        <div className="btn-hint">预计 10–20 秒生成结果</div>
-      )}
-
-      {/* ===== 隐私提示 ===== */}
-      <div className="privacy-notice">🔒 请勿输入涉密内容，文本仅用于本次处理展示</div>
+        )}
+      </div>
 
       {/* ===== Output Area ===== */}
       <div className="card" style={{ marginTop: 16 }}>
-        <div className="card-title">
+        <div className="card-title" style={{ marginBottom: 10 }}>
           <span>{isReviewTab ? '📋' : '📄'}</span> {isReviewTab ? '检查报告' : '降重结果'}
         </div>
-        <div
-          ref={outputRef}
-          className={`output-area${!output ? ' empty' : ''}`}
-        >
-          {output || (
-            loading
-              ? '🤖 AI 正在分析，请稍候...'
-              : isReviewTab
-                ? '上传截图后点击检查，AI 会生成详细的审查报告'
-                : '处理完成后，将显示降重后文本、修改说明，并支持一键复制。'
-          )}
-        </div>
-        {output && (
-          <div className="output-actions">
-            <button
-              className={`btn-action${copied ? ' copied' : ''}`}
-              onClick={() => handleCopy(false)}
-            >
-              {copied ? '✅ 已复制' : '📋 复制结果'}
-            </button>
-            <button
-              className="btn-action outline"
-              onClick={() => { setInput(output); window.scrollTo({ top: 0, behavior: 'smooth' }); showToast('📋 结果已填回输入框', 'success') }}
-            >
-              🔄 继续降重
-            </button>
-            <button
-              className="btn-action outline"
-              style={{ borderColor: '#8b5cf6', color: '#6d28d9' }}
-              onClick={async () => {
-                if (!output) return
-                setInput(output)
-                setTab('runshe')
-                showToast('🔄 已切换到润色模式', 'success')
-                window.scrollTo({ top: 0, behavior: 'smooth' })
-              }}
-            >
-              🎓 转为更学术
-            </button>
+
+        {loading ? (
+          <div className="output-area empty" ref={outputRef}>
+            🤖 AI 正在分析，请稍候...
+          </div>
+        ) : output ? (
+          <>
+            <div className="output-result" ref={outputRef}>{output}</div>
+            {modifyNote && (
+              <div className="modify-note">
+                <strong>修改说明：</strong>{modifyNote}
+              </div>
+            )}
+            <div className="output-actions">
+              <button
+                className={`btn-action${copied ? ' copied' : ''}`}
+                onClick={handleCopy}
+              >
+                {copied ? '✅ 已复制' : '📋 复制结果'}
+              </button>
+              <button
+                className="btn-action outline"
+                onClick={() => { setInput(output); window.scrollTo({ top: 0, behavior: 'smooth' }); showToast('📋 结果已填回输入框', 'success') }}
+              >
+                🔄 继续降重
+              </button>
+              <button
+                className="btn-action outline"
+                style={{ borderColor: '#8b5cf6', color: '#6d28d9' }}
+                onClick={() => {
+                  if (!output) return
+                  setInput(output)
+                  setTab('runshe')
+                  showToast('🔄 已切换到润色模式', 'success')
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                }}
+              >
+                🎓 转为更学术
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="output-empty" ref={outputRef}>
+            <div className="empty-main">
+              {isReviewTab ? '检查报告将在这里显示' : '降重结果将在这里显示'}
+            </div>
+            <div className="empty-sub">
+              {isReviewTab
+                ? '上传截图或输入内容后点击检查，AI 会生成详细的审查报告'
+                : '处理完成后，可复制结果、继续降重或转为更学术表达。'}
+            </div>
           </div>
         )}
       </div>
@@ -724,7 +871,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* Footer */}
+      {/* ===== Footer ===== */}
       <div className="footer">
         <p>📖 毕过AI · 专注毕业论文降重、润色与提交前检查</p>
         <p style={{ marginTop: 4, color: '#94a3b8' }}>访客 <span id="busuanzi_value_site_pv"></span> 次 ｜ 已服务 <span id="busuanzi_value_page_pv"></span> 篇论文</p>
@@ -889,41 +1036,107 @@ export default function App() {
         </div>
       )}
 
-      {/* ===== Settings Modal ===== */}
-      {showSettings && (
-        <div className="modal-overlay" onClick={() => setShowSettings(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3>⚙️ API 设置</h3>
-            <p>请使用你自己的 DeepSeek API Key，密钥仅保存在你本地浏览器。</p>
+      {/* ===== Config Modal (first-time & settings) ===== */}
+      {showConfig && (
+        <div className="modal-overlay" onClick={() => { if (configMode !== 'firstTime') setShowConfig(false) }}>
+          <div className="modal config-modal" onClick={e => e.stopPropagation()}>
+            <h3>{configMode === 'firstTime' ? '配置 DeepSeek API Key' : '⚙️ 设置'}</h3>
 
-            <div className="settings-hint">
-              <strong>免费获取 DeepSeek Key：</strong>
-              前往 <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener" style={{ color: '#2563eb' }}>DeepSeek 官网</a> 注册登录 →
-              左侧「API Keys」→ 创建 Key → 复制 sk- 开头的密钥粘贴到下面。
-              <br /><br />
-              新用户注册送 500 万 tokens，足够降重数百篇论文。
+            {configMode === 'firstTime' && (
+              <p>毕过AI 使用 DeepSeek 接口生成降重结果。你可以免费注册 DeepSeek 账号并领取 API Key，填入后即可开始使用。</p>
+            )}
+
+            {/* API Address */}
+            <div className="config-field">
+              <label>API 地址</label>
+              <input
+                className="settings-input"
+                value={configApiBase}
+                onChange={e => setConfigApiBase(e.target.value)}
+                placeholder="https://api.deepseek.com"
+                style={{ fontFamily: 'monospace' }}
+              />
+              <div className="config-hint">默认使用 DeepSeek 官方 API 地址，一般无需修改</div>
             </div>
 
-            <input
-              className="settings-input"
-              placeholder="sk-..."
-              value={apiKey}
-              onChange={e => setApiKey(e.target.value)}
-            />
+            {/* API Key */}
+            <div className="config-field">
+              <label>API Key</label>
+              <div className="password-wrapper">
+                <input
+                  type={configShowPwd ? 'text' : 'password'}
+                  value={configApiKey}
+                  onChange={e => setConfigApiKey(e.target.value)}
+                  placeholder="粘贴你的 DeepSeek API Key"
+                />
+                <button
+                  type="button"
+                  className="pwd-toggle-btn"
+                  onClick={() => setConfigShowPwd(!configShowPwd)}
+                >
+                  {configShowPwd ? '🙈 隐藏' : '👁️ 显示'}
+                </button>
+              </div>
+            </div>
 
-            <button
-              className="btn-primary"
-              onClick={() => {
-                setSavedApiKey(apiKey)
-                setShowSettings(false)
-                showToast('API Key 已保存', 'success')
-              }}
+            {/* DeepSeek Link */}
+            <a
+              href="https://platform.deepseek.com/api_keys"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="config-link-btn"
             >
-              💾 保存
-            </button>
-            <button className="btn-close-modal" onClick={() => setShowSettings(false)}>
-              取消
-            </button>
+              🔗 去 DeepSeek 免费领取 Key
+            </a>
+
+            {/* Settings-only: Demo mode toggle */}
+            {configMode === 'settings' && (
+              <div className="config-toggle-row">
+                <span className="config-toggle-label">Demo 模式</span>
+                <button
+                  className={`config-toggle-btn${demoMode ? ' active' : ''}`}
+                  onClick={() => {
+                    const next = !demoMode
+                    setDemoMode(next)
+                    localStorage.setItem(STORAGE_KEY_DEMO, String(next))
+                    showToast(next ? '🎪 Demo 模式已开启' : 'Demo 模式已关闭', 'success')
+                  }}
+                >
+                  {demoMode ? '✅ 已开启' : '⬜ 已关闭'}
+                </button>
+              </div>
+            )}
+
+            {/* First-time buttons */}
+            {configMode === 'firstTime' ? (
+              <>
+                <button className="btn-primary" onClick={saveConfig}>
+                  💾 保存并开始使用
+                </button>
+                <button
+                  className="btn-outline"
+                  style={{ width: '100%', marginTop: 8, justifyContent: 'center' }}
+                  onClick={enableDemoAndClose}
+                >
+                  🎪 体验 Demo 模式
+                </button>
+                <button className="btn-close-modal" onClick={dismissGuide}>
+                  稍后再说
+                </button>
+              </>
+            ) : (
+              <>
+                <button className="btn-primary" onClick={saveConfig}>
+                  💾 保存配置
+                </button>
+                <button className="btn-clear" onClick={clearConfig}>
+                  🗑️ 清除配置
+                </button>
+                <button className="btn-close-modal" onClick={() => setShowConfig(false)}>
+                  取消
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
