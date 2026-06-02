@@ -13,7 +13,7 @@ dist-ssr
 *.local
 .env
 .env.local
-docs
+# docs — 取消 gitignore，GitHub Pages 需要此目录
 
 # Editor directories and files
 .vscode/*
