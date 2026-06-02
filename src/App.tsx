@@ -202,6 +202,8 @@ const STORAGE_KEY_BONUS = 'biguoai_bonus'
 const STORAGE_KEY_VIP = 'biguoai_vip'
 const STORAGE_KEY_API = 'biguoai_apikey'
 const STORAGE_KEY_VIP_CODE = 'biguoai_vipcode'
+const STORAGE_KEY_USER_ID = 'biguoai_uid'
+const STORAGE_KEY_SHARED_COUNT = 'biguoai_shared'
 
 // 默认激活码（你可以随时改这个）
 const DEFAULT_VIP_CODE = 'biguo2026'
@@ -280,6 +282,25 @@ function setCurrentVipCode(code: string) {
   localStorage.setItem(STORAGE_KEY_VIP_CODE, code)
 }
 
+function getUserShareId(): string {
+  let id = localStorage.getItem(STORAGE_KEY_USER_ID)
+  if (!id) {
+    id = Math.random().toString(36).slice(2, 8)
+    localStorage.setItem(STORAGE_KEY_USER_ID, id)
+  }
+  return id
+}
+
+function getShareCount(): number {
+  return parseInt(localStorage.getItem(STORAGE_KEY_SHARED_COUNT) || '0', 10)
+}
+
+function incrementShareCount(): number {
+  const n = getShareCount() + 1
+  localStorage.setItem(STORAGE_KEY_SHARED_COUNT, String(n))
+  return n
+}
+
 // ====== Toast Component ======
 function Toast({ msg, type, onDone }: { msg: string; type: 'success' | 'error' | 'warning'; onDone: () => void }) {
   useEffect(() => {
@@ -308,7 +329,12 @@ export default function App() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [showAdmin, setShowAdmin] = useState(false)
   const [adminCode, setAdminCode] = useState(getCurrentVipCode())
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [shareCopied, setShareCopied] = useState(false)
   const logoClicks = useRef(0)
+
+  const siteUrl = window.location.origin + window.location.pathname
+  const shareLink = siteUrl + '?ref=' + getUserShareId()
 
   const currentTab = ALL_TABS.find(t => t.key === tab)!
 
@@ -425,16 +451,21 @@ export default function App() {
     }
   }, [input, imagePreview, vip, apiKey, currentTab, showToast, refreshUsage])
 
-  const handleCopy = useCallback(async () => {
+  const handleCopy = useCallback(async (withFooter = false) => {
     if (!output) return
     try {
-      await navigator.clipboard.writeText(output)
+      let text = output
+      if (withFooter) {
+        text += '\n\n—— 由毕过AI生成 (免费论文降重/润色/盲审工具)\n' + siteUrl
+      }
+      await navigator.clipboard.writeText(text)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
+      showToast('已复制' + (withFooter ? '（含来源链接）' : ''), 'success')
     } catch {
       showToast('复制失败，请手动选择复制', 'error')
     }
-  }, [output, showToast])
+  }, [output, showToast, siteUrl])
 
   // Reset output when tab changes
   useEffect(() => {
@@ -443,13 +474,23 @@ export default function App() {
     handleRemoveImage()
   }, [tab]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // On mount: check URL for VIP code
+  // On mount: check URL for VIP code or referral
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const codeFromUrl = params.get('vip')
     if (codeFromUrl && codeFromUrl.length >= 4) {
       setCurrentVipCode(codeFromUrl)
       showToast('欢迎使用毕过AI！每天免费5次 🎉', 'success')
+    }
+    // Referral tracking: visitor comes from a friend's share link
+    const ref = params.get('ref')
+    if (ref && ref.length >= 4) {
+      const visitedKey = 'biguoai_ref_visited_' + ref
+      if (!localStorage.getItem(visitedKey)) {
+        localStorage.setItem(visitedKey, '1')
+        addBonusUses(3)
+        showToast('🎉 通过好友链接进入，已获得 +3 次免费机会！', 'success')
+      }
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -593,9 +634,22 @@ export default function App() {
           <div className="output-actions">
             <button
               className={`btn-outline${copied ? ' copied' : ''}`}
-              onClick={handleCopy}
+              onClick={() => handleCopy(true)}
             >
-              {copied ? '✅ 已复制' : '📋 复制报告'}
+              {copied ? '✅ 已复制' : '📋 复制带来源'}
+            </button>
+            <button
+              className="btn-outline"
+              onClick={() => handleCopy(false)}
+            >
+              📋 仅复制内容
+            </button>
+            <button
+              className="btn-outline"
+              style={{ borderColor: '#f59e0b', color: '#92400e' }}
+              onClick={() => setShowShareModal(true)}
+            >
+              📤 邀请好友
             </button>
           </div>
         )}
@@ -613,16 +667,7 @@ export default function App() {
             className="btn-outline"
             style={{ borderColor: '#10b981', color: '#10b981' }}
             onClick={() => {
-              addBonusUses(3)
-              const shareUrl = window.location.origin + window.location.pathname
-              const shareText = '论文党必备！免费降重+盲审检查工具 👉 ' + shareUrl
-              if (navigator.share) {
-                navigator.share({ title: '毕过AI', text: shareText })
-              } else {
-                navigator.clipboard.writeText(shareText)
-                showToast('链接已复制！分享给好友双方各+3次 🎉', 'success')
-              }
-              refreshUsage()
+              setShowShareModal(true)
             }}
           >
             📤 分享得次数
@@ -638,6 +683,96 @@ export default function App() {
         <p>毕过AI · 论文写作助手 — 免费！觉得好用请我喝杯奶茶 ☕</p>
         <p style={{ marginTop: 4, color: '#94a3b8' }}>访客 <span id="busuanzi_value_site_pv"></span> 次</p>
       </div>
+
+      {/* ===== Share Modal ===== */}
+      {showShareModal && (
+        <div className="modal-overlay" onClick={() => setShowShareModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <h3>📤 邀请好友，双方各得 +3 次</h3>
+            <p>分享链接给好友，TA 通过你的链接访问后，<strong>你和 TA 各获得 3 次额外免费次数</strong>！</p>
+
+            <div style={{
+              background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)',
+              borderRadius: 10,
+              padding: '14px 16px',
+              marginBottom: 16,
+              border: '1px solid #bbf7d0',
+            }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#166534', marginBottom: 8 }}>
+                ✅ 已邀请 <strong>{getShareCount()}</strong> 人 · 今日额外获得 <strong>{getBonusUses()}</strong> 次
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  className="settings-input"
+                  value={shareLink}
+                  readOnly
+                  style={{ marginBottom: 0, flex: 1, fontSize: 12 }}
+                />
+                <button
+                  className="btn-outline"
+                  style={{ borderColor: '#10b981', color: '#10b981', whiteSpace: 'nowrap' }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(shareLink)
+                    setShareCopied(true)
+                    setTimeout(() => setShareCopied(false), 2000)
+                    addBonusUses(3)
+                    incrementShareCount()
+                    refreshUsage()
+                  }}
+                >
+                  {shareCopied ? '✅ 已复制' : '📋 复制'}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 8 }}>分享至</div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <button
+                  style={{
+                    width: 48, height: 48, borderRadius: 12, border: 'none',
+                    background: '#07c160', color: 'white', fontSize: 22, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                  onClick={() => {
+                    navigator.clipboard.writeText('论文党必备！毕过AI · ' + shareLink)
+                    showToast('已复制，粘贴到微信分享', 'success')
+                  }}
+                  title="微信"
+                >💬</button>
+                <button
+                  style={{
+                    width: 48, height: 48, borderRadius: 12, border: 'none',
+                    background: '#ff8200', color: 'white', fontSize: 22, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                  onClick={() => {
+                    navigator.clipboard.writeText('论文党必备！毕过AI · ' + shareLink)
+                    showToast('已复制，粘贴到微博分享', 'success')
+                  }}
+                  title="微博"
+                >📢</button>
+                <button
+                  style={{
+                    width: 48, height: 48, borderRadius: 12, border: '1px solid #e2e8f0',
+                    color: '#64748b', fontSize: 22, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(shareLink)
+                    showToast('链接已复制，可分享到任何地方', 'success')
+                  }}
+                  title="复制链接"
+                >🔗</button>
+              </div>
+            </div>
+
+            <button className="btn-close-modal" onClick={() => setShowShareModal(false)}>
+              关闭
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ===== Payment Modal ===== */}
       {showPayment && (
