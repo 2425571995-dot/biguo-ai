@@ -227,6 +227,157 @@ body {
   font-weight: 600;
 }
 
+.char-over-warning {
+  display: block;
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+/* ========== Paste Example Button ========== */
+.btn-paste-example {
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-paste-example:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+
+/* ========== Intensity Section ========== */
+.intensity-section {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px 20px;
+  margin-bottom: 12px;
+}
+
+.intensity-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.intensity-row:last-child {
+  margin-bottom: 0;
+}
+
+.intensity-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  min-width: 60px;
+}
+
+.intensity-options {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.intensity-btn {
+  padding: 5px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  background: var(--card-bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  border-right: 1px solid var(--border);
+}
+
+.intensity-btn:last-child {
+  border-right: none;
+}
+
+.intensity-btn:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.intensity-btn.active {
+  background: var(--primary);
+  color: white;
+}
+
+.output-style-display {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ========== Button Hint ========== */
+.btn-hint {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+/* ========== Privacy Notice ========== */
+.privacy-notice {
+  text-align: center;
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+/* ========== Output Action Buttons ========== */
+.btn-action {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  background: var(--primary);
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.btn-action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+
+.btn-action.copied {
+  background: var(--success);
+}
+
+.btn-action.outline {
+  background: var(--card-bg);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.btn-action.outline:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  box-shadow: none;
+  transform: none;
+}
+
 /* ========== Button ========== */
 .btn-primary {
   display: block;
@@ -584,17 +735,26 @@ body {
   line-height: 1.5;
 }
 
+/* ========== Header Subtitle ========== */
+.header-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  padding-left: 46px;
+}
+
 /* ========== Info Banner ========== */
 .info-banner {
-  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  background: #fefce8;
+  border: 1px solid #fde68a;
   border-radius: 10px;
-  padding: 12px 16px;
-  font-size: 13px;
+  padding: 10px 14px;
+  font-size: 12px;
   color: #92400e;
   margin-bottom: 16px;
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 6px;
 }
 
 .info-banner strong {

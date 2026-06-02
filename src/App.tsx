@@ -508,8 +508,9 @@ export default function App() {
           <div className="header-logo" onClick={() => { logoClicks.current++; if (logoClicks.current >= 5) { setShowAdmin(true); logoClicks.current = 0 } }} style={{ cursor: 'pointer' }}>毕</div>
           <div className="header-title">
             毕过<span>AI</span>
-            <span className="header-badge">免费</span>
+            <span className="header-badge">{remaining >= 0 ? `免费 ${remaining}次` : '免费'}</span>
           </div>
+          <div className="header-subtitle">保留原意，优化句式，降低重复表达</div>
         </div>
         <button className="settings-btn" onClick={() => setShowSettings(true)}>
           ⚙️ 设置
@@ -518,11 +519,9 @@ export default function App() {
 
       {/* Info Banner */}
       <div className="info-banner">
-        <span>💡</span>
+        <span>🎓</span>
         <div>
-          <strong>毕过AI · 论文写作助手：</strong>
-          从降重润色到盲审检查，一站式搞定毕业论文。每天
-          {FREE_DAILY_LIMIT} 次免费，分享好友额外 +3 次 👇
+          论文初稿别急着提交：先降重、再润色、最后做提交前检查。今日免费 <strong>{FREE_DAILY_LIMIT} 次</strong>，分享好友 +3 次 👇
         </div>
       </div>
 
@@ -541,7 +540,7 @@ export default function App() {
 
       {/* ===== Review Tabs with Header ===== */}
       <div className="tabs review-section">
-        <span className="tabs-section-label">📋 盲审专区</span>
+        <span className="tabs-section-label">📋 提交前检查</span>
         {REVIEW_TABS.map(t => (
           <button
             key={t.key}
@@ -557,7 +556,18 @@ export default function App() {
       <div className="card">
         <div className="card-title">
           <span>{isReviewTab ? '🔍' : '📝'}</span>
-          {isReviewTab ? `${currentTab.label} — 上传截图或输入说明` : `输入文本`}
+          {isReviewTab ? `${currentTab.label}` : `输入论文段落`}
+          {!isReviewTab && (
+            <button
+              className="btn-paste-example"
+              onClick={() => {
+                setInput(`随着互联网技术的快速发展，人工智能在教育领域中的应用越来越广泛。通过对学习数据的分析，人工智能能够为学生提供更加个性化的学习建议，从而提高学习效率和教学质量。`)
+                showToast('📋 已填入示例文本', 'success')
+              }}
+            >
+              📋 粘贴示例
+            </button>
+          )}
         </div>
 
         {/* Image Upload (for vision tabs) */}
@@ -596,27 +606,66 @@ export default function App() {
           style={{ minHeight: currentTab.needsImage ? 80 : 180 }}
         />
         {!currentTab.needsImage && (
-          <div className={`char-count${input.length > (vip ? VIP_CHAR_LIMIT : FREE_CHAR_LIMIT) - 100 ? ' over' : ''}`}>
-            {input.length} / {vip ? VIP_CHAR_LIMIT : FREE_CHAR_LIMIT} 字
+          <div className={`char-count${input.length > (vip ? VIP_CHAR_LIMIT : FREE_CHAR_LIMIT) ? ' over' : ''}`}>
+            {input.length} / {vip ? VIP_CHAR_LIMIT : FREE_CHAR_LIMIT} 字，建议 100–800 字
+            {input.length > (vip ? VIP_CHAR_LIMIT : FREE_CHAR_LIMIT) && (
+              <span className="char-over-warning">⚠️ 内容过长，建议分段处理</span>
+            )}
           </div>
         )}
       </div>
+
+      {/* ===== 降重强度 (仅核心标签) ===== */}
+      {!isReviewTab && (
+        <div className="intensity-section">
+          <div className="intensity-row">
+            <span className="intensity-label">降重强度</span>
+            <div className="intensity-options">
+              {['轻度', '中度', '强力'].map((level, i) => {
+                const values = ['mild', 'moderate', 'strong']
+                return (
+                  <button
+                    key={level}
+                    className={`intensity-btn${i === 1 ? ' active' : ''}`}
+                    onClick={() => {
+                      // Store intensity preference (modify when implementing)
+                      showToast(`已选择「${level}」降重`, 'success')
+                    }}
+                  >
+                    {level}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          <div className="intensity-row">
+            <span className="intensity-label">输出风格</span>
+            <span className="output-style-display">本科论文</span>
+          </div>
+        </div>
+      )}
 
       {/* ===== Process Button ===== */}
       <button
         className={`btn-primary${loading ? ' loading' : ''}`}
         onClick={handleProcess}
-        disabled={loading || (!input.trim() && !imagePreview)}
+        disabled={loading || (!input.trim() && !imagePreview) || input.length > (vip ? VIP_CHAR_LIMIT : FREE_CHAR_LIMIT)}
       >
         {loading
-          ? '🤖 AI 分析中，请稍候...'
+          ? '🤖 AI 处理中，请稍候...'
           : currentTab.btnLabel}
       </button>
+      {!loading && (
+        <div className="btn-hint">预计 10–20 秒生成结果</div>
+      )}
+
+      {/* ===== 隐私提示 ===== */}
+      <div className="privacy-notice">🔒 请勿输入涉密内容，文本仅用于本次处理展示</div>
 
       {/* ===== Output Area ===== */}
       <div className="card" style={{ marginTop: 16 }}>
         <div className="card-title">
-          <span>{isReviewTab ? '📋' : '📄'}</span> {isReviewTab ? '检查报告' : '处理结果'}
+          <span>{isReviewTab ? '📋' : '📄'}</span> {isReviewTab ? '检查报告' : '降重结果'}
         </div>
         <div
           ref={outputRef}
@@ -627,29 +676,35 @@ export default function App() {
               ? '🤖 AI 正在分析，请稍候...'
               : isReviewTab
                 ? '上传截图后点击检查，AI 会生成详细的审查报告'
-                : '等待处理...'
+                : '处理完成后，将显示降重后文本、修改说明，并支持一键复制。'
           )}
         </div>
         {output && (
           <div className="output-actions">
             <button
-              className={`btn-outline${copied ? ' copied' : ''}`}
-              onClick={() => handleCopy(true)}
-            >
-              {copied ? '✅ 已复制' : '📋 复制带来源'}
-            </button>
-            <button
-              className="btn-outline"
+              className={`btn-action${copied ? ' copied' : ''}`}
               onClick={() => handleCopy(false)}
             >
-              📋 仅复制内容
+              {copied ? '✅ 已复制' : '📋 复制结果'}
             </button>
             <button
-              className="btn-outline"
-              style={{ borderColor: '#f59e0b', color: '#92400e' }}
-              onClick={() => setShowShareModal(true)}
+              className="btn-action outline"
+              onClick={() => { setInput(output); window.scrollTo({ top: 0, behavior: 'smooth' }); showToast('📋 结果已填回输入框', 'success') }}
             >
-              📤 邀请好友
+              🔄 继续降重
+            </button>
+            <button
+              className="btn-action outline"
+              style={{ borderColor: '#8b5cf6', color: '#6d28d9' }}
+              onClick={async () => {
+                if (!output) return
+                setInput(output)
+                setTab('runshe')
+                showToast('🔄 已切换到润色模式', 'success')
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
+            >
+              🎓 转为更学术
             </button>
           </div>
         )}
@@ -658,30 +713,26 @@ export default function App() {
       {/* ===== Usage Bar ===== */}
       <div className="usage-bar">
         <span className="usage-text">
-          {vip
-            ? '👑 会员用户 · 无限使用'
-            : `今日可用：${remaining} / ${getTotalDailyLimit()} 次`}
+          📅 今日剩余免费次数：<strong>{vip ? '∞' : remaining}</strong> 次
         </span>
         <div style={{ display: 'flex', gap: 6 }}>
           <button
             className="btn-outline"
             style={{ borderColor: '#10b981', color: '#10b981' }}
-            onClick={() => {
-              setShowShareModal(true)
-            }}
+            onClick={() => { setShowShareModal(true) }}
           >
-            📤 分享得次数
+            🎁 分享得 +3 次
           </button>
           <button className="btn-upgrade" onClick={() => setShowPayment(true)}>
-            🚀 ¥9.9 无限用
+            ⭐ 开通无限次 ¥9.9
           </button>
         </div>
       </div>
 
       {/* Footer */}
       <div className="footer">
-        <p>毕过AI · 论文写作助手 — 免费！觉得好用请我喝杯奶茶 ☕</p>
-        <p style={{ marginTop: 4, color: '#94a3b8' }}>访客 <span id="busuanzi_value_site_pv"></span> 次</p>
+        <p>📖 毕过AI · 专注毕业论文降重、润色与提交前检查</p>
+        <p style={{ marginTop: 4, color: '#94a3b8' }}>访客 <span id="busuanzi_value_site_pv"></span> 次 ｜ 已服务 <span id="busuanzi_value_page_pv"></span> 篇论文</p>
       </div>
 
       {/* ===== Share Modal ===== */}

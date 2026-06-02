@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx vite *)",
+      "Bash(awk '/^{%}/ && NR==502 {print \"Fragment open at line\", NR} /^<\\\\/>$/ && NR==1006 {print \"Fragment close at line\", NR}' src/App.tsx)"
+    ]
+  }
+}
