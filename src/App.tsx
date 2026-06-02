@@ -190,9 +190,8 @@ AI会根据你提供的论文内容，逐项检查盲审常见扣分点。`,
 const ALL_TABS = [...CORE_TABS, ...REVIEW_TABS]
 
 // ====== Config ======
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://shiyunapi.com/v1'
-const DEFAULT_API_KEY = import.meta.env.VITE_API_KEY || ''
-const MODEL = import.meta.env.VITE_MODEL || 'gpt-4o'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.deepseek.com/v1'
+const MODEL = import.meta.env.VITE_MODEL || 'deepseek-chat'
 const FREE_DAILY_LIMIT = 5
 const FREE_CHAR_LIMIT = 800
 const VIP_CHAR_LIMIT = 2000
@@ -319,7 +318,7 @@ export default function App() {
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'warning' } | null>(null)
   const [showPayment, setShowPayment] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
-  const [apiKey, setApiKey] = useState(getSavedApiKey() || DEFAULT_API_KEY)
+  const [apiKey, setApiKey] = useState(() => getSavedApiKey())
   const [, forceUpdate] = useState(0)
   const [vip, setVip] = useState(isVip())
   const [verifyCode, setVerifyCode] = useState('')
@@ -385,7 +384,7 @@ export default function App() {
       }
     }
 
-    const key = apiKey || DEFAULT_API_KEY
+    const key = apiKey
     if (!key) {
       showToast('请先设置 API Key', 'warning')
       setShowSettings(true)
@@ -895,12 +894,14 @@ export default function App() {
         <div className="modal-overlay" onClick={() => setShowSettings(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <h3>⚙️ API 设置</h3>
-            <p>配置你的 API Key（如果默认 key 额度用完，可以自己填）</p>
+            <p>请使用你自己的 DeepSeek API Key，密钥仅保存在你本地浏览器。</p>
 
             <div className="settings-hint">
-              <strong>获取方式：</strong>
-              前往 <a href="https://shiyunapi.com" target="_blank" rel="noopener" style={{ color: '#2563eb' }}>诗云API</a> 注册 →
-              创建 API Key → 复制粘贴到下面。
+              <strong>免费获取 DeepSeek Key：</strong>
+              前往 <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener" style={{ color: '#2563eb' }}>DeepSeek 官网</a> 注册登录 →
+              左侧「API Keys」→ 创建 Key → 复制 sk- 开头的密钥粘贴到下面。
+              <br /><br />
+              新用户注册送 500 万 tokens，足够降重数百篇论文。
             </div>
 
             <input
