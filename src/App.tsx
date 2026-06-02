@@ -621,21 +621,17 @@ export default function App() {
           <div className="intensity-row">
             <span className="intensity-label">降重强度</span>
             <div className="intensity-options">
-              {['轻度', '中度', '强力'].map((level, i) => {
-                const values = ['mild', 'moderate', 'strong']
-                return (
+              {['轻度', '中度', '强力'].map((level, i) => (
                   <button
                     key={level}
                     className={`intensity-btn${i === 1 ? ' active' : ''}`}
                     onClick={() => {
-                      // Store intensity preference (modify when implementing)
                       showToast(`已选择「${level}」降重`, 'success')
                     }}
                   >
                     {level}
                   </button>
-                )
-              })}
+              ))}
             </div>
           </div>
           <div className="intensity-row">
