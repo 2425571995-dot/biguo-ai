@@ -765,10 +765,8 @@ export default function App() {
           disabled={loading || (!input.trim() && !imagePreview) || input.length > CHAR_LIMIT}
         >
           {loading
-            ? '🤖 正在降重中...'
-            : isReviewTab
-              ? currentTab.btnLabel
-              : '🚀 开始智能降重，保留原意'}
+            ? '🤖 正在处理中...'
+            : currentTab.btnLabel}
         </button>
 
         {/* Button Hint */}
@@ -795,7 +793,7 @@ export default function App() {
       {/* ===== Output Area ===== */}
       <div className="card" style={{ marginTop: 16 }}>
         <div className="card-title" style={{ marginBottom: 10 }}>
-          <span>{isReviewTab ? '📋' : '📄'}</span> {isReviewTab ? '检查报告' : '降重结果'}
+          <span>{isReviewTab ? '📋' : '📄'}</span> {isReviewTab ? '检查报告' : '处理结果'}
         </div>
 
         {loading ? (
@@ -841,12 +839,12 @@ export default function App() {
         ) : (
           <div className="output-empty" ref={outputRef}>
             <div className="empty-main">
-              {isReviewTab ? '检查报告将在这里显示' : '降重结果将在这里显示'}
+              {isReviewTab ? '检查报告将在这里显示' : '处理结果将在这里显示'}
             </div>
             <div className="empty-sub">
               {isReviewTab
                 ? '上传截图或输入内容后点击检查，AI 会生成详细的审查报告'
-                : '处理完成后，可复制结果、继续降重或转为更学术表达。'}
+                : '输入内容后点击处理，AI 将自动优化你的论文表达。'}
             </div>
           </div>
         )}
