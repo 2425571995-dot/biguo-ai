@@ -190,7 +190,7 @@ AI会根据你提供的论文内容，逐项检查盲审常见扣分点。`,
 const ALL_TABS = [...CORE_TABS, ...REVIEW_TABS]
 
 // ====== Config ======
-const MODEL = import.meta.env.VITE_MODEL || 'deepseek-chat'
+const MODEL = import.meta.env.VITE_MODEL || 'gpt-4o'
 const FREE_DAILY_LIMIT = 5
 const CHAR_LIMIT = 2000
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
@@ -209,7 +209,7 @@ const STORAGE_KEY_DEEPSEEK_KEY = 'deepseek_api_key'
 const STORAGE_KEY_GUIDE = 'hasSeenKeyGuide'
 const STORAGE_KEY_DEMO = 'demo_mode_enabled'
 
-const DEFAULT_API_BASE = 'https://api.deepseek.com'
+const DEFAULT_API_BASE = 'https://shiyunapi.com/v1'
 
 // 默认激活码（你可以随时改这个）
 const DEFAULT_VIP_CODE = 'biguo2026'
@@ -454,7 +454,7 @@ export default function App() {
         setOutput(DEMO_OUTPUT)
         setModifyNote(DEMO_NOTE)
       } else {
-        setOutput('这是 Demo 模式示例结果。配置 DeepSeek API Key 后，即可处理你输入的真实论文内容。\n\n' + DEMO_OUTPUT)
+        setOutput('这是 Demo 模式示例结果。配置诗云 API Key 后，即可处理你输入的真实论文内容。\n\n' + DEMO_OUTPUT)
         setModifyNote(DEMO_NOTE)
       }
       if (!vip) {
@@ -627,7 +627,7 @@ export default function App() {
       {/* ===== Demo Mode Banner ===== */}
       {demoMode && (
         <div className="demo-banner">
-          <span>🎪 当前为 Demo 模式：可体验降重效果示例，配置 DeepSeek API Key 后可处理真实论文内容。</span>
+          <span>🎪 当前为 Demo 模式：可体验降重效果示例，配置诗云 API Key 后可处理真实论文内容。</span>
           <button className="demo-config-btn" onClick={() => openConfig('settings')}>
             立即配置 Key
           </button>
@@ -779,7 +779,7 @@ export default function App() {
         {/* API Key Prompt (inline warning) */}
         {showApiKeyPrompt && (
           <div className="api-key-prompt">
-            <p>请先配置 DeepSeek API Key，或使用 Demo 模式体验。</p>
+            <p>请先配置诗云 API Key，或使用 Demo 模式体验。</p>
             <div className="api-key-prompt-buttons">
               <button onClick={() => { setShowApiKeyPrompt(false); openConfig('settings') }}>
                 🔑 配置 API Key
@@ -1040,10 +1040,10 @@ export default function App() {
       {showConfig && (
         <div className="modal-overlay" onClick={() => { if (configMode !== 'firstTime') setShowConfig(false) }}>
           <div className="modal config-modal" onClick={e => e.stopPropagation()}>
-            <h3>{configMode === 'firstTime' ? '配置 DeepSeek API Key' : '⚙️ 设置'}</h3>
+            <h3>{configMode === 'firstTime' ? '配置诗云 API Key' : '⚙️ 设置'}</h3>
 
             {configMode === 'firstTime' && (
-              <p>毕过AI 使用 DeepSeek 接口生成降重结果。你可以免费注册 DeepSeek 账号并领取 API Key，填入后即可开始使用。</p>
+              <p>毕过AI 使用诗云 API 接口生成降重结果。你可以免费注册诗云账号并领取 API Key，填入后即可开始使用。</p>
             )}
 
             {/* API Address */}
@@ -1053,10 +1053,10 @@ export default function App() {
                 className="settings-input"
                 value={configApiBase}
                 onChange={e => setConfigApiBase(e.target.value)}
-                placeholder="https://api.deepseek.com"
+                placeholder="https://shiyunapi.com/v1"
                 style={{ fontFamily: 'monospace' }}
               />
-              <div className="config-hint">默认使用 DeepSeek 官方 API 地址，一般无需修改</div>
+              <div className="config-hint">默认使用诗云 API 地址，一般无需修改</div>
             </div>
 
             {/* API Key */}
@@ -1067,7 +1067,7 @@ export default function App() {
                   type={configShowPwd ? 'text' : 'password'}
                   value={configApiKey}
                   onChange={e => setConfigApiKey(e.target.value)}
-                  placeholder="粘贴你的 DeepSeek API Key"
+                  placeholder="粘贴你的诗云 API Key"
                 />
                 <button
                   type="button"
@@ -1079,14 +1079,14 @@ export default function App() {
               </div>
             </div>
 
-            {/* DeepSeek Link */}
+            {/* 诗云 Link */}
             <a
-              href="https://platform.deepseek.com/api_keys"
+              href="https://shiyunapi.com"
               target="_blank"
               rel="noopener noreferrer"
               className="config-link-btn"
             >
-              🔗 去 DeepSeek 免费领取 Key
+              🔗 去诗云免费领取 Key
             </a>
 
             {/* Settings-only: Demo mode toggle */}
