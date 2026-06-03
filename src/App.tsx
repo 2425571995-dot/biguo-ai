@@ -627,9 +627,9 @@ export default function App() {
       {/* ===== Demo Mode Banner ===== */}
       {demoMode && (
         <div className="demo-banner">
-          <span>🎪 当前为 Demo 模式：可体验降重效果示例，配置诗云 API Key 后可处理真实论文内容。</span>
-          <button className="demo-config-btn" onClick={() => openConfig('settings')}>
-            立即配置 Key
+          <span>🎪 Demo 体验模式 — 配置 Key 后可处理你的真实论文</span>
+          <button className="demo-config-btn" onClick={() => openConfig('firstTime')}>
+            🚀 免费配置，1 分钟搞定
           </button>
         </div>
       )}
@@ -779,10 +779,10 @@ export default function App() {
         {/* API Key Prompt (inline warning) */}
         {showApiKeyPrompt && (
           <div className="api-key-prompt">
-            <p>请先配置诗云 API Key，或使用 Demo 模式体验。</p>
+            <p>🔑 需要一个 API Key 才能使用。免费注册诗云，1 分钟搞定！</p>
             <div className="api-key-prompt-buttons">
-              <button onClick={() => { setShowApiKeyPrompt(false); openConfig('settings') }}>
-                🔑 配置 API Key
+              <button onClick={() => { setShowApiKeyPrompt(false); openConfig('firstTime') }}>
+                🚀 免费配置 Key（1 分钟）
               </button>
               <button onClick={() => { setShowApiKeyPrompt(false); localStorage.setItem(STORAGE_KEY_DEMO, 'true'); setDemoMode(true); showToast('🎪 已切换到 Demo 模式', 'success') }}>
                 🎪 体验 Demo 模式
@@ -1040,10 +1040,30 @@ export default function App() {
       {showConfig && (
         <div className="modal-overlay" onClick={() => { if (configMode !== 'firstTime') setShowConfig(false) }}>
           <div className="modal config-modal" onClick={e => e.stopPropagation()}>
-            <h3>{configMode === 'firstTime' ? '配置诗云 API Key' : '⚙️ 设置'}</h3>
+            <h3>{configMode === 'firstTime' ? '🚀 1 分钟完成配置' : '⚙️ 设置'}</h3>
 
             {configMode === 'firstTime' && (
-              <p>毕过AI 使用诗云 API 接口生成降重结果。你可以免费注册诗云账号并领取 API Key，填入后即可开始使用。</p>
+              <div style={{ marginBottom: 20 }}>
+                <p style={{ fontSize: 14, color: '#475569', marginBottom: 16, lineHeight: 1.6 }}>
+                  毕过AI 需要连接 AI 接口来生成结果。请按以下步骤操作：
+                </p>
+                <div style={{ background: '#f8fafc', borderRadius: 10, padding: '14px 16px', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 10 }}>
+                    <span style={{ width: 24, height: 24, borderRadius: 12, background: '#2563eb', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>1</span>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>注册获取免费 Key</div>
+                      <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>点击下方按钮，1 分钟注册即送免费额度</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <span style={{ width: 24, height: 24, borderRadius: 12, background: '#2563eb', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>2</span>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>粘贴 Key 并保存</div>
+                      <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>将创建的 Key 粘贴到下方输入框</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* API Address */}
@@ -1056,7 +1076,11 @@ export default function App() {
                 placeholder="https://shiyunapi.com/v1"
                 style={{ fontFamily: 'monospace' }}
               />
-              <div className="config-hint">默认使用诗云 API 地址，一般无需修改</div>
+              {configMode === 'firstTime' ? (
+                <div className="config-hint">✅ 已默认填好，无需修改</div>
+              ) : (
+                <div className="config-hint">默认使用诗云 API 地址，一般无需修改</div>
+              )}
             </div>
 
             {/* API Key */}
@@ -1067,7 +1091,7 @@ export default function App() {
                   type={configShowPwd ? 'text' : 'password'}
                   value={configApiKey}
                   onChange={e => setConfigApiKey(e.target.value)}
-                  placeholder="粘贴你的诗云 API Key"
+                  placeholder={configMode === 'firstTime' ? '从诗云复制 Key 粘贴到这里' : '粘贴你的诗云 API Key'}
                 />
                 <button
                   type="button"
@@ -1085,9 +1109,36 @@ export default function App() {
               target="_blank"
               rel="noopener noreferrer"
               className="config-link-btn"
+              style={configMode === 'firstTime' ? { padding: '12px 20px', fontSize: 14, fontWeight: 600 } : {}}
             >
-              🔗 去诗云免费领取 Key
+              🔑 去诗云免费获取 Key
             </a>
+
+            {/* First-time: Demo fallback */}
+            {configMode === 'firstTime' && (
+              <div style={{ textAlign: 'center', marginTop: 14 }}>
+                <button
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#94a3b8',
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    padding: '4px 8px',
+                  }}
+                  onClick={() => {
+                    setShowConfig(false)
+                    localStorage.setItem(STORAGE_KEY_GUIDE, 'true')
+                    localStorage.setItem(STORAGE_KEY_DEMO, 'true')
+                    setDemoMode(true)
+                    showToast('🎪 已进入体验模式，可先试用 Demo', 'success')
+                  }}
+                >
+                  先不配置，进入体验模式看看效果
+                </button>
+              </div>
+            )}
 
             {/* Settings-only: Demo mode toggle */}
             {configMode === 'settings' && (
