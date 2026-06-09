@@ -296,31 +296,24 @@ export function analyzeResume(resumeText: string, jdText: string, jobCategory?: 
   const coreMatched = coreKeywords.filter(m => m.matched).length
   const secondaryMatched = secondaryKeywords.filter(m => m.matched).length
 
-  // ---- 关键词得分（基准40分，匹配越多越高） ----
+  // ---- 关键词得分（基准50分） ----
   const coreMatchRate = coreKeywords.length > 0 ? coreMatched / coreKeywords.length : 0
   const secondaryMatchRate = secondaryKeywords.length > 0 ? secondaryMatched / secondaryKeywords.length : 0
+  const finalKeywordScore = Math.min(100, Math.round(50 + coreMatchRate * 40 + secondaryMatchRate * 10))
 
-  // 核心匹配率权重70%，次要30%
-  const keywordScore = Math.round(40 + coreMatchRate * 40 + secondaryMatchRate * 20)
-  // 封顶100
-  const finalKeywordScore = Math.min(100, keywordScore)
-
-  // ---- 格式检查 ----
+  // ---- 格式检查（更温和） ----
   const formatIssues: FormatIssue[] = checkFormat(resumeText)
   const formatErrors = formatIssues.filter(i => i.type === 'error').length
   const formatWarnings = formatIssues.filter(i => i.type === 'warning').length
-  // 基准60分，每个错误扣10，每个警告扣5
-  const formatScore = Math.max(20, Math.min(100, 60 - formatErrors * 10 - formatWarnings * 5))
+  const formatScore = Math.max(30, Math.min(100, 75 - formatErrors * 8 - formatWarnings * 4))
 
-  // ---- 结构完整性 ----
+  // ---- 结构完整性（只扣大分，不扣小分） ----
   const structureIssues: string[] = checkStructure(resumeText)
-  // 基准50分，缺一个模块扣15，但有联系人等基础信息加回10
   const hasContact = /\b1[3-9]\d{9}\b/.test(resumeText) || /[\w.-]+@[\w.-]+\.\w+/.test(resumeText)
-  const structureScore = Math.max(20, Math.min(100, 50 - structureIssues.length * 15 + (hasContact ? 10 : 0)))
+  const structureScore = Math.max(30, Math.min(100, 65 - structureIssues.length * 10 + (hasContact ? 5 : 0)))
 
-  // ---- 总分 ----
-  // 关键词45% + 格式30% + 结构25%
-  const totalScore = Math.round(finalKeywordScore * 0.45 + formatScore * 0.30 + structureScore * 0.25)
+  // ---- 总分：关键词50% + 格式28% + 结构22% ----
+  const totalScore = Math.round(finalKeywordScore * 0.50 + formatScore * 0.28 + structureScore * 0.22)
 
   // ---- 等级 ----
   let level: 'excellent' | 'good' | 'moderate' | 'weak'
@@ -387,9 +380,9 @@ function checkFormat(resumeText: string): FormatIssue[] {
     issues.push({ type: 'warning', item: '缺少邮箱', detail: '未检测到邮箱地址' })
   }
 
-  // 检查是否包含个人信息表头
-  if (resumeText.trim().length < 50) {
-    issues.push({ type: 'error', item: '简历内容过短', detail: '简历内容不足50字符，请粘贴完整简历' })
+  // 检查是否包含个人信息表头（阈值放宽到30字符）
+  if (resumeText.trim().length < 30) {
+    issues.push({ type: 'error', item: '简历内容过短', detail: '简历内容不足30字符，请粘贴完整简历' })
   }
 
   // 检查是否有emoji
