@@ -171,8 +171,8 @@ export default function ResumeChecker() {
 
   // VIP 验证
   const handleVerify = () => {
-    if (verifyCode.trim().length < 4) {
-      // 轻提示
+    const code = verifyCode.trim()
+    if (code.length < 4) {
       const el = document.createElement('div')
       el.textContent = '请先输入交易单号后6位'
       el.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1e293b;color:#fff;padding:12px 24px;border-radius:24px;font-size:14px;z-index:9999;pointer-events:none;'
@@ -180,10 +180,60 @@ export default function ResumeChecker() {
       setTimeout(() => el.remove(), 2000)
       return
     }
-    localStorage.setItem(STORAGE_KEY_RESUME_VIP, JSON.stringify({ expires: Date.now() + selectedPlan * 86400000 }))
+
+    // 如果是会员码（BG开头），走恢复流程
+    if (code.startsWith('BG') && code.length >= 8) {
+      localStorage.setItem(STORAGE_KEY_RESUME_VIP, JSON.stringify({
+        expires: Date.now() + 30 * 86400000,
+        memberCode: code,
+      }))
+      setVip(true)
+      setVerifyCode('')
+      setShowPayment(false)
+      const el2 = document.createElement('div')
+      el2.innerHTML = `<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;">
+        <div style="background:#fff;border-radius:16px;padding:24px;max-width:340px;text-align:center;margin:16px;">
+          <div style="font-size:40px;margin-bottom:8px;">🎉</div>
+          <div style="font-size:16px;font-weight:700;margin-bottom:4px;">会员已恢复！</div>
+          <div style="font-size:13px;color:#64748b;margin-bottom:12px;">有效期至 ${new Date(Date.now() + 30 * 86400000).toLocaleDateString()}</div>
+          <button style="width:100%;padding:12px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;" onclick="this.closest('[style*=\"fixed\"]').remove()">开始使用</button>
+        </div>
+      </div>`
+      document.body.appendChild(el2)
+      return
+    }
+
+    // 从输入码派生出会员码（取后8位+固定盐做简单hash）
+    const memberCode = 'BG' + simpleHash(code).toUpperCase().slice(0, 10)
+    const expires = Date.now() + selectedPlan * 86400000
+
+    localStorage.setItem(STORAGE_KEY_RESUME_VIP, JSON.stringify({ expires, memberCode }))
     setVip(true)
     setVerifyCode('')
     setShowPayment(false)
+
+    // 弹窗提示保存会员码
+    const el = document.createElement('div')
+    el.innerHTML = `<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:16px;padding:24px;max-width:340px;text-align:center;margin:16px;">
+        <div style="font-size:40px;margin-bottom:8px;">🔑</div>
+        <div style="font-size:16px;font-weight:700;margin-bottom:8px;">已解锁 · 请保存会员码</div>
+        <div style="font-size:22px;font-weight:800;letter-spacing:2px;color:#2563eb;background:#eff6ff;padding:12px;border-radius:12px;margin-bottom:8px;font-family:monospace;" id="memberCodeDisplay">${memberCode}</div>
+        <div style="font-size:12px;color:#64748b;margin-bottom:16px;line-height:1.5;">换设备/清缓存后，在解锁框里输入此会员码即可恢复。建议截图保存！</div>
+        <button style="width:100%;padding:12px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;" onclick="this.closest('[style*=\"fixed\"]').remove()">✅ 已截图保存</button>
+      </div>
+    </div>`
+    document.body.appendChild(el)
+  }
+
+  // 简单哈希函数
+  function simpleHash(s: string): string {
+    let h = 0
+    for (let i = 0; i < s.length; i++) {
+      h = ((h << 5) - h) + s.charCodeAt(i)
+      h |= 0
+    }
+    return Math.abs(h).toString(36)
   }
 
   const handleCopy = async (text: string, label: string) => {
@@ -612,7 +662,7 @@ export default function ResumeChecker() {
 
             <input
               className="verify-input"
-              placeholder="输入交易单号后6位验证"
+              placeholder="新用户输交易单号后6位 · 老用户输会员码恢复"
               value={verifyCode}
               onChange={e => setVerifyCode(e.target.value)}
               style={{ marginTop: 10, fontSize: 15, textAlign: 'center', letterSpacing: 2 }}
