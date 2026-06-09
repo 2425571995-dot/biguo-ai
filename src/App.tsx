@@ -619,8 +619,8 @@ export default function App() {
           }}>
             📋 简历体检
           </a>
-          <button className="settings-btn" onClick={() => setShowSettings(true)}>
-            ⚙️ 设置
+          <button className="settings-btn" onClick={() => window.open('https://shiyunapi.com', '_blank')}>
+            ⚙️ API
           </button>
         </div>
       </header>
