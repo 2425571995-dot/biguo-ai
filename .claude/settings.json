@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx vite *)",
+      "Bash(awk '/^{%}/ && NR==502 {print \"Fragment open at line\", NR} /^<\\\\/>$/ && NR==1006 {print \"Fragment close at line\", NR}' src/App.tsx)",
+      "Bash(curl -s https://2425571995-dot.github.io/biguo-ai/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} %{url_effective}\\\\n\" \"https://2425571995-dot.github.io/biguo-ai/\" -H \"Cache-Control: no-cache\" -o -)",
+      "Bash(curl -s \"https://2425571995-doc.github.io/biguo-ai/\")",
+      "Bash(curl -s \"https://2425571995-dot.github.io/biguo-ai/index.html\")",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(curl -s \"https://2425571995-dot.github.io/biguo-ai/\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://github.com/2425571995-dot/biguo-ai/blob/master/docs/assets/index-CGEU1_MQ.css\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/2425571995-dot/biguo-ai/master/docs/index.html\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/2425571995-dot/biguo-ai/refs/heads/master/docs/index.html\")"
+    ]
+  }
+}

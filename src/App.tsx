@@ -190,16 +190,35 @@ AI会根据你提供的论文内容，逐项检查盲审常见扣分点。`,
 const ALL_TABS = [...CORE_TABS, ...REVIEW_TABS]
 
 // ====== Config ======
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://shiyunapi.com/v1'
-const DEFAULT_API_KEY = import.meta.env.VITE_API_KEY || ''
 const MODEL = import.meta.env.VITE_MODEL || 'gpt-4o'
-const FREE_DAILY_LIMIT = 3
-const FREE_CHAR_LIMIT = 800
-const VIP_CHAR_LIMIT = 5000
+const FREE_DAILY_LIMIT = 5
+const CHAR_LIMIT = 2000
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
+
+// Storage keys
 const STORAGE_KEY_USAGE = 'biguoai_usage'
+const STORAGE_KEY_BONUS = 'biguoai_bonus'
 const STORAGE_KEY_VIP = 'biguoai_vip'
-const STORAGE_KEY_API = 'biguoai_apikey'
+const STORAGE_KEY_VIP_CODE = 'biguoai_vipcode'
+const STORAGE_KEY_USER_ID = 'biguoai_uid'
+const STORAGE_KEY_SHARED_COUNT = 'biguoai_shared'
+
+// New storage keys
+const STORAGE_KEY_DEEPSEEK_BASE = 'deepseek_api_base_url'
+const STORAGE_KEY_DEEPSEEK_KEY = 'deepseek_api_key'
+const STORAGE_KEY_GUIDE = 'hasSeenKeyGuide'
+const STORAGE_KEY_DEMO = 'demo_mode_enabled'
+
+const DEFAULT_API_BASE = 'https://shiyunapi.com/v1'
+
+// 默认激活码（你可以随时改这个）
+const DEFAULT_VIP_CODE = 'biguo2026'
+
+// Demo data
+const DEMO_INPUT = '随着互联网技术的快速发展，人工智能在教育领域中的应用越来越广泛。通过对学习数据的分析，人工智能能够为学生提供更加个性化的学习建议，从而提高学习效率和教学质量。'
+const DEMO_OUTPUT = '随着互联网技术的持续进步，人工智能在教育场景中的应用范围不断扩大。借助对学习行为和相关数据的分析，人工智能能够为学生提供更具针对性的学习建议，从而在一定程度上提升学习效率与教学质量。'
+const DEMO_NOTE = '已调整句式结构，替换部分重复表达，并增强了论文表述的自然度和学术感。'
+const CORE_PLACEHOLDER = '粘贴需要降重的论文段落，建议 100–800 字。\n\nAI 将在保留原意的基础上调整句式、替换重复表达，并优化为更自然的学术表达。'
 
 // ====== Helpers ======
 function getTodayStr(): string {
@@ -224,6 +243,28 @@ function incrementUsage(): number {
   return newCount
 }
 
+function getBonusUses(): number {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_BONUS)
+    if (!raw) return 0
+    const data = JSON.parse(raw)
+    if (data.date === getTodayStr()) return data.bonus
+  } catch { /* ignore */ }
+  return 0
+}
+
+function addBonusUses(n: number): number {
+  const today = getTodayStr()
+  const current = getBonusUses()
+  const newBonus = current + n
+  localStorage.setItem(STORAGE_KEY_BONUS, JSON.stringify({ date: today, bonus: newBonus }))
+  return newBonus
+}
+
+function getTotalDailyLimit(): number {
+  return FREE_DAILY_LIMIT + getBonusUses()
+}
+
 function isVip(): boolean {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_VIP)
@@ -237,12 +278,31 @@ function saveVip(days: number) {
   localStorage.setItem(STORAGE_KEY_VIP, JSON.stringify({ expires: Date.now() + days * 86400000 }))
 }
 
-function getSavedApiKey(): string {
-  return localStorage.getItem(STORAGE_KEY_API) || ''
+function getCurrentVipCode(): string {
+  return localStorage.getItem(STORAGE_KEY_VIP_CODE) || DEFAULT_VIP_CODE
 }
 
-function setSavedApiKey(key: string) {
-  localStorage.setItem(STORAGE_KEY_API, key)
+function setCurrentVipCode(code: string) {
+  localStorage.setItem(STORAGE_KEY_VIP_CODE, code)
+}
+
+function getUserShareId(): string {
+  let id = localStorage.getItem(STORAGE_KEY_USER_ID)
+  if (!id) {
+    id = Math.random().toString(36).slice(2, 8)
+    localStorage.setItem(STORAGE_KEY_USER_ID, id)
+  }
+  return id
+}
+
+function getShareCount(): number {
+  return parseInt(localStorage.getItem(STORAGE_KEY_SHARED_COUNT) || '0', 10)
+}
+
+function incrementShareCount(): number {
+  const n = getShareCount() + 1
+  localStorage.setItem(STORAGE_KEY_SHARED_COUNT, String(n))
+  return n
 }
 
 // ====== Toast Component ======
@@ -262,8 +322,6 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' | 'warning' } | null>(null)
   const [showPayment, setShowPayment] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
-  const [apiKey, setApiKey] = useState(getSavedApiKey() || DEFAULT_API_KEY)
   const [, forceUpdate] = useState(0)
   const [vip, setVip] = useState(isVip())
   const [verifyCode, setVerifyCode] = useState('')
@@ -271,6 +329,27 @@ export default function App() {
   const outputRef = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [showAdmin, setShowAdmin] = useState(false)
+  const [adminCode, setAdminCode] = useState(getCurrentVipCode())
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [shareCopied, setShareCopied] = useState(false)
+  const logoClicks = useRef(0)
+
+  // New states for API Key guide & Demo mode
+  const [savedApiKey, setSavedApiKey] = useState(() => localStorage.getItem(STORAGE_KEY_DEEPSEEK_KEY) || '')
+  const [savedApiBase, setSavedApiBase] = useState(() => localStorage.getItem(STORAGE_KEY_DEEPSEEK_BASE) || DEFAULT_API_BASE)
+  const [demoMode, setDemoMode] = useState(() => localStorage.getItem(STORAGE_KEY_DEMO) === 'true')
+  const [showConfig, setShowConfig] = useState(false)
+  const [configMode, setConfigMode] = useState<'firstTime' | 'settings'>('settings')
+  const [configApiKey, setConfigApiKey] = useState('')
+  const [configApiBase, setConfigApiBase] = useState(DEFAULT_API_BASE)
+  const [configShowPwd, setConfigShowPwd] = useState(false)
+  const [showApiKeyPrompt, setShowApiKeyPrompt] = useState(false)
+  const [intensity, setIntensity] = useState('中度')
+  const [modifyNote, setModifyNote] = useState('')
+
+  const siteUrl = window.location.origin + window.location.pathname
+  const shareLink = siteUrl + '?ref=' + getUserShareId()
 
   const currentTab = ALL_TABS.find(t => t.key === tab)!
 
@@ -281,6 +360,53 @@ export default function App() {
   const refreshUsage = useCallback(() => {
     forceUpdate(n => n + 1)
     setVip(isVip())
+  }, [])
+
+  const openConfig = useCallback((mode: 'firstTime' | 'settings') => {
+    setConfigMode(mode)
+    setConfigApiKey(mode === 'settings' ? savedApiKey : '')
+    setConfigApiBase(mode === 'settings' ? savedApiBase : DEFAULT_API_BASE)
+    setConfigShowPwd(false)
+    setShowApiKeyPrompt(false)
+    setShowConfig(true)
+  }, [savedApiKey, savedApiBase])
+
+  const saveConfig = useCallback(() => {
+    localStorage.setItem(STORAGE_KEY_DEEPSEEK_KEY, configApiKey)
+    localStorage.setItem(STORAGE_KEY_DEEPSEEK_BASE, configApiBase)
+    localStorage.setItem(STORAGE_KEY_GUIDE, 'true')
+    setSavedApiKey(configApiKey)
+    setSavedApiBase(configApiBase)
+    setShowConfig(false)
+    if (configApiKey) {
+      showToast('API Key 已保存', 'success')
+    } else {
+      showToast('配置已保存', 'success')
+    }
+  }, [configApiKey, configApiBase, showToast])
+
+  const clearConfig = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEY_DEEPSEEK_KEY)
+    localStorage.removeItem(STORAGE_KEY_DEEPSEEK_BASE)
+    localStorage.removeItem(STORAGE_KEY_DEMO)
+    setSavedApiKey('')
+    setSavedApiBase(DEFAULT_API_BASE)
+    setDemoMode(false)
+    setShowConfig(false)
+    showToast('配置已清除', 'success')
+  }, [showToast])
+
+  const enableDemoAndClose = useCallback(() => {
+    localStorage.setItem(STORAGE_KEY_DEMO, 'true')
+    localStorage.setItem(STORAGE_KEY_GUIDE, 'true')
+    setDemoMode(true)
+    setShowConfig(false)
+    showToast('🎪 已切换到 Demo 模式', 'success')
+  }, [showToast])
+
+  const dismissGuide = useCallback(() => {
+    localStorage.setItem(STORAGE_KEY_GUIDE, 'true')
+    setShowConfig(false)
   }, [])
 
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -309,30 +435,53 @@ export default function App() {
 
     // Validate
     if (!text && !imagePreview) {
-      showToast(currentTab.needsImage ? '请先上传截图或输入说明' : '请先输入需要处理的文本', 'warning')
+      showToast(currentTab.needsImage ? '请先上传截图或输入说明' : '请先粘贴需要降重的论文段落', 'warning')
       return
     }
 
+    // Check daily limit
     if (!vip) {
       const used = getUsage()
-      if (used >= FREE_DAILY_LIMIT) {
+      if (used >= getTotalDailyLimit()) {
         setShowPayment(true)
         return
       }
     }
 
-    const key = apiKey || DEFAULT_API_KEY
-    if (!key) {
-      showToast('请先设置 API Key', 'warning')
-      setShowSettings(true)
+    // Demo mode — return preset results
+    if (demoMode) {
+      if (text === DEMO_INPUT) {
+        setOutput(DEMO_OUTPUT)
+        setModifyNote(DEMO_NOTE)
+      } else {
+        setOutput('这是 Demo 模式示例结果。配置诗云 API Key 后，即可处理你输入的真实论文内容。\n\n' + DEMO_OUTPUT)
+        setModifyNote(DEMO_NOTE)
+      }
+      if (!vip) {
+        incrementUsage()
+        refreshUsage()
+      }
+      showToast('Demo 模式演示结果 🎉', 'success')
       return
     }
 
+    // Check API Key
+    if (!savedApiKey) {
+      setShowApiKeyPrompt(true)
+      return
+    }
+
+    setShowApiKeyPrompt(false)
     setLoading(true)
     setOutput('')
 
     try {
-      // Build multimodal content for vision tabs
+      // Build API URL
+      let baseUrl = (savedApiBase || DEFAULT_API_BASE).replace(/\/+$/, '')
+      if (!baseUrl.endsWith('/v1')) baseUrl += '/v1'
+      const apiUrl = `${baseUrl}/chat/completions`
+
+      // Build messages
       const messages: any[] = []
       let userContent: any[]
 
@@ -342,24 +491,33 @@ export default function App() {
           { type: 'image_url', image_url: { url: imagePreview } },
         ]
       } else {
+        // Add intensity instruction for jiangchong tab
+        let systemPrompt = currentTab.systemPrompt
+        if (tab === 'jiangchong' && intensity !== '中度') {
+          const intensityMap: Record<string, string> = {
+            '轻度': '\n\n【强度要求】轻度降重：轻微调整句式，保持原文风格，降重率约10-20%。',
+            '强力': '\n\n【强度要求】强力降重：大幅改写句式，彻底重组语序，降重率约50-70%。',
+          }
+          systemPrompt += intensityMap[intensity] || ''
+        }
         userContent = [
-          { type: 'text', text: currentTab.systemPrompt + '\n\n' + text },
+          { type: 'text', text: systemPrompt + '\n\n' + text },
         ]
       }
 
       messages.push({ role: 'user', content: userContent })
 
-      const res = await fetch(`${API_BASE}/chat/completions`, {
+      const res = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${key}`,
+          'Authorization': `Bearer ${savedApiKey}`,
         },
         body: JSON.stringify({
           model: MODEL,
           messages,
           max_tokens: 4096,
-          temperature: 0.7,
+          temperature: intensity === '强力' ? 0.9 : intensity === '轻度' ? 0.5 : 0.7,
         }),
       })
 
@@ -373,6 +531,7 @@ export default function App() {
       if (!result) throw new Error('API返回为空，请重试')
 
       setOutput(result)
+      setModifyNote('已优化句式结构、替换重复表达，并尽量保留原文含义。')
 
       if (!vip) {
         incrementUsage()
@@ -381,11 +540,11 @@ export default function App() {
 
       showToast('处理完成！ 🎉', 'success')
     } catch (err: any) {
-      showToast(err.message || '处理失败，请重试', 'error')
+      showToast('处理失败，请检查 API Key 是否正确，或稍后重试。', 'error')
     } finally {
       setLoading(false)
     }
-  }, [input, imagePreview, vip, apiKey, currentTab, showToast, refreshUsage])
+  }, [input, imagePreview, vip, savedApiKey, savedApiBase, currentTab, showToast, refreshUsage, demoMode, tab, intensity])
 
   const handleCopy = useCallback(async () => {
     if (!output) return
@@ -393,31 +552,44 @@ export default function App() {
       await navigator.clipboard.writeText(output)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
+      showToast('已复制到剪贴板', 'success')
     } catch {
       showToast('复制失败，请手动选择复制', 'error')
     }
   }, [output, showToast])
 
-  const handleVerifyVip = useCallback(() => {
-    const code = verifyCode.trim()
-    if (!code) { showToast('请输入验证码', 'warning'); return }
-    if (code.length >= 6) {
-      saveVip(365)
-      setVip(true)
-      setVerifyCode('')
-      setShowPayment(false)
-      showToast('升级成功！祝你毕业顺利 🎉', 'success')
-    } else {
-      showToast('验证码无效，请检查后重试', 'error')
-    }
-  }, [verifyCode, showToast])
-
-  // Reset output when tab changes
+  // Reset state when tab changes
   useEffect(() => {
     setOutput('')
     setInput('')
+    setModifyNote('')
     handleRemoveImage()
   }, [tab]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // On mount: check URL params and show first-time guide
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const codeFromUrl = params.get('vip')
+    if (codeFromUrl && codeFromUrl.length >= 4) {
+      setCurrentVipCode(codeFromUrl)
+      showToast('欢迎使用毕过AI！每天免费5次 🎉', 'success')
+    }
+    // Referral tracking
+    const ref = params.get('ref')
+    if (ref && ref.length >= 4) {
+      const visitedKey = 'biguoai_ref_visited_' + ref
+      if (!localStorage.getItem(visitedKey)) {
+        localStorage.setItem(visitedKey, '1')
+        addBonusUses(3)
+        showToast('🎉 通过好友链接进入，已获得 +3 次免费机会！', 'success')
+      }
+    }
+
+    // First-time guide popup
+    if (!savedApiKey && !localStorage.getItem(STORAGE_KEY_GUIDE)) {
+      openConfig('firstTime')
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const usedToday = getUsage()
   const remaining = Math.max(0, FREE_DAILY_LIMIT - usedToday)
@@ -427,13 +599,16 @@ export default function App() {
     <>
       {toast && <Toast msg={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
 
-      {/* Header */}
+      {/* ===== Header ===== */}
       <header className="header">
         <div className="header-left">
-          <div className="header-logo">毕</div>
-          <div className="header-title">
-            毕过<span>AI</span>
-            <span className="header-badge">免费</span>
+          <div className="header-logo" onClick={() => { logoClicks.current++; if (logoClicks.current >= 5) { setShowAdmin(true); logoClicks.current = 0 } }} style={{ cursor: 'pointer' }}>毕</div>
+          <div>
+            <div className="header-title">
+              毕过<span>AI</span>
+              <span className="header-badge">{vip ? '无限次' : '每日免费 5 次'}</span>
+            </div>
+            <div className="header-subtitle">保留原意，优化句式，降低重复表达</div>
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -450,15 +625,23 @@ export default function App() {
         </div>
       </header>
 
-      {/* Info Banner */}
+      {/* ===== Info Banner ===== */}
       <div className="info-banner">
-        <span>💡</span>
+        <span>🎓</span>
         <div>
-          <strong>毕过AI · 论文写作助手：</strong>
-          从降重润色到盲审检查，一站式搞定毕业论文。每天
-          {FREE_DAILY_LIMIT} 次免费，升级会员整篇论文无限处理 👇
+          论文初稿别急着提交：先降重、再润色、最后做提交前检查。今日免费 <strong>{FREE_DAILY_LIMIT} 次</strong>，分享好友 +3 次 👇
         </div>
       </div>
+
+      {/* ===== Demo Mode Banner ===== */}
+      {demoMode && (
+        <div className="demo-banner">
+          <span>🎪 Demo 体验模式 — 配置 Key 后可处理你的真实论文</span>
+          <button className="demo-config-btn" onClick={() => openConfig('firstTime')}>
+            🚀 免费配置，1 分钟搞定
+          </button>
+        </div>
+      )}
 
       {/* ===== Core Tabs ===== */}
       <div className="tabs">
@@ -475,7 +658,7 @@ export default function App() {
 
       {/* ===== Review Tabs with Header ===== */}
       <div className="tabs review-section">
-        <span className="tabs-section-label">📋 盲审专区</span>
+        <span className="tabs-section-label">📋 提交前检查</span>
         {REVIEW_TABS.map(t => (
           <button
             key={t.key}
@@ -487,16 +670,28 @@ export default function App() {
         ))}
       </div>
 
-      {/* ===== Input Area ===== */}
-      <div className="card">
-        <div className="card-title">
+      {/* ===== Main Consolidated Card ===== */}
+      <div className="card main-card">
+        {/* Card Title + Paste Example */}
+        <div className="card-title" style={{ marginBottom: 0 }}>
           <span>{isReviewTab ? '🔍' : '📝'}</span>
-          {isReviewTab ? `${currentTab.label} — 上传截图或输入说明` : `输入文本`}
+          {isReviewTab ? `${currentTab.label}` : '输入论文段落'}
+          {!isReviewTab && (
+            <button
+              className="btn-paste-example"
+              onClick={() => {
+                setInput(DEMO_INPUT)
+                showToast('📋 已填入示例文本', 'success')
+              }}
+            >
+              📋 粘贴示例
+            </button>
+          )}
         </div>
 
         {/* Image Upload (for vision tabs) */}
         {currentTab.needsImage && (
-          <div className="image-upload-area">
+          <div className="image-upload-area" style={{ marginBottom: 0 }}>
             {!imagePreview ? (
               <div className="image-upload-placeholder" onClick={() => fileInputRef.current?.click()}>
                 <div className="upload-icon">📤</div>
@@ -519,59 +714,147 @@ export default function App() {
           </div>
         )}
 
-        {/* Text Input (always visible but optional for vision tabs) */}
+        {/* Textarea */}
         <textarea
           className={`text-input${loading ? ' dimmed' : ''}`}
           value={input}
           onChange={e => setInput(e.target.value)}
-          placeholder={currentTab.placeholder}
+          placeholder={isReviewTab ? currentTab.placeholder : CORE_PLACEHOLDER}
           disabled={loading}
-          maxLength={vip ? VIP_CHAR_LIMIT : FREE_CHAR_LIMIT}
-          style={{ minHeight: currentTab.needsImage ? 80 : 180 }}
+          maxLength={CHAR_LIMIT}
+          style={{ minHeight: currentTab.needsImage ? 80 : 170 }}
         />
+
+        {/* Char Count */}
         {!currentTab.needsImage && (
-          <div className={`char-count${input.length > (vip ? VIP_CHAR_LIMIT : FREE_CHAR_LIMIT) - 100 ? ' over' : ''}`}>
-            {input.length} / {vip ? VIP_CHAR_LIMIT : FREE_CHAR_LIMIT} 字
+          <div className={`char-count${input.length > CHAR_LIMIT ? ' over' : ''}`}>
+            {input.length} / {CHAR_LIMIT} 字，建议 100–800 字
+            {input.length > CHAR_LIMIT && (
+              <span className="char-over-warning">⚠️ 内容过长，建议分段处理，效果更稳定</span>
+            )}
+          </div>
+        )}
+
+        {/* Intensity & Output Style (core tabs only) */}
+        {!isReviewTab && (
+          <>
+            <div className="intensity-row">
+              <span className="intensity-label">降重强度</span>
+              <div className="intensity-options">
+                {['轻度', '中度', '强力'].map((level) => (
+                  <button
+                    key={level}
+                    className={`intensity-btn${intensity === level ? ' active' : ''}`}
+                    onClick={() => {
+                      setIntensity(level)
+                      showToast(`已选择「${level}」降重`, 'success')
+                    }}
+                  >
+                    {level}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="intensity-row" style={{ marginBottom: 0 }}>
+              <span className="intensity-label">输出风格</span>
+              <span className="output-style-display">本科论文</span>
+            </div>
+          </>
+        )}
+
+        {/* Privacy Notice */}
+        <div className="privacy-notice" style={{ marginTop: 0, marginBottom: 0 }}>
+          🔒 请勿输入涉密内容，文本仅用于本次处理展示
+        </div>
+
+        {/* Main Button */}
+        <button
+          className={`btn-primary${loading ? ' loading' : ''}`}
+          onClick={handleProcess}
+          disabled={loading || (!input.trim() && !imagePreview) || input.length > CHAR_LIMIT}
+        >
+          {loading
+            ? '🤖 正在处理中...'
+            : currentTab.btnLabel}
+        </button>
+
+        {/* Button Hint */}
+        {!loading && (
+          <div className="btn-hint" style={{ marginTop: 0 }}>预计 10–20 秒生成结果</div>
+        )}
+
+        {/* API Key Prompt (inline warning) */}
+        {showApiKeyPrompt && (
+          <div className="api-key-prompt">
+            <p>🔑 需要一个 API Key 才能使用。免费注册诗云，1 分钟搞定！</p>
+            <div className="api-key-prompt-buttons">
+              <button onClick={() => { setShowApiKeyPrompt(false); openConfig('firstTime') }}>
+                🚀 免费配置 Key（1 分钟）
+              </button>
+              <button onClick={() => { setShowApiKeyPrompt(false); localStorage.setItem(STORAGE_KEY_DEMO, 'true'); setDemoMode(true); showToast('🎪 已切换到 Demo 模式', 'success') }}>
+                🎪 体验 Demo 模式
+              </button>
+            </div>
           </div>
         )}
       </div>
 
-      {/* ===== Process Button ===== */}
-      <button
-        className={`btn-primary${loading ? ' loading' : ''}`}
-        onClick={handleProcess}
-        disabled={loading || (!input.trim() && !imagePreview)}
-      >
-        {loading
-          ? '🤖 AI 分析中，请稍候...'
-          : currentTab.btnLabel}
-      </button>
-
       {/* ===== Output Area ===== */}
       <div className="card" style={{ marginTop: 16 }}>
-        <div className="card-title">
+        <div className="card-title" style={{ marginBottom: 10 }}>
           <span>{isReviewTab ? '📋' : '📄'}</span> {isReviewTab ? '检查报告' : '处理结果'}
         </div>
-        <div
-          ref={outputRef}
-          className={`output-area${!output ? ' empty' : ''}`}
-        >
-          {output || (
-            loading
-              ? '🤖 AI 正在分析，请稍候...'
-              : isReviewTab
-                ? '上传截图后点击检查，AI 会生成详细的审查报告'
-                : '等待处理...'
-          )}
-        </div>
-        {output && (
-          <div className="output-actions">
-            <button
-              className={`btn-outline${copied ? ' copied' : ''}`}
-              onClick={handleCopy}
-            >
-              {copied ? '✅ 已复制' : '📋 复制报告'}
-            </button>
+
+        {loading ? (
+          <div className="output-area empty" ref={outputRef}>
+            🤖 AI 正在分析，请稍候...
+          </div>
+        ) : output ? (
+          <>
+            <div className="output-result" ref={outputRef}>{output}</div>
+            {modifyNote && (
+              <div className="modify-note">
+                <strong>修改说明：</strong>{modifyNote}
+              </div>
+            )}
+            <div className="output-actions">
+              <button
+                className={`btn-action${copied ? ' copied' : ''}`}
+                onClick={handleCopy}
+              >
+                {copied ? '✅ 已复制' : '📋 复制结果'}
+              </button>
+              <button
+                className="btn-action outline"
+                onClick={() => { setInput(output); window.scrollTo({ top: 0, behavior: 'smooth' }); showToast('📋 结果已填回输入框', 'success') }}
+              >
+                🔄 继续降重
+              </button>
+              <button
+                className="btn-action outline"
+                style={{ borderColor: '#8b5cf6', color: '#6d28d9' }}
+                onClick={() => {
+                  if (!output) return
+                  setInput(output)
+                  setTab('runshe')
+                  showToast('🔄 已切换到润色模式', 'success')
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                }}
+              >
+                🎓 转为更学术
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="output-empty" ref={outputRef}>
+            <div className="empty-main">
+              {isReviewTab ? '检查报告将在这里显示' : '处理结果将在这里显示'}
+            </div>
+            <div className="empty-sub">
+              {isReviewTab
+                ? '上传截图或输入内容后点击检查，AI 会生成详细的审查报告'
+                : '输入内容后点击处理，AI 将自动优化你的论文表达。'}
+            </div>
           </div>
         )}
       </div>
@@ -579,130 +862,410 @@ export default function App() {
       {/* ===== Usage Bar ===== */}
       <div className="usage-bar">
         <span className="usage-text">
-          {vip
-            ? '👑 会员用户 · 无限使用'
-            : `今日免费剩余：${remaining} / ${FREE_DAILY_LIMIT} 次`}
+          📅 今日剩余免费次数：<strong>{vip ? '∞' : remaining}</strong> 次
         </span>
-        {!vip && (
-          <button className="btn-upgrade" onClick={() => setShowPayment(true)}>
-            🔓 升级会员
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            className="btn-outline"
+            style={{ borderColor: '#10b981', color: '#10b981' }}
+            onClick={() => { setShowShareModal(true) }}
+          >
+            🎁 分享得 +3 次
           </button>
-        )}
+          <button className="btn-upgrade" onClick={() => setShowPayment(true)}>
+            ⭐ 开通无限次 ¥9.9
+          </button>
+        </div>
       </div>
 
-      {/* Footer */}
+      {/* ===== Footer ===== */}
       <div className="footer">
-        <p>毕过AI · 论文写作助手 — 降重润色·盲审检查·一站搞定 | 有问题反馈给开发者</p>
+        <p>📖 毕过AI · 专注毕业论文降重、润色与提交前检查</p>
+        <p style={{ marginTop: 4, color: '#94a3b8' }}>访客 <span id="busuanzi_value_site_pv"></span> 次 ｜ 已服务 <span id="busuanzi_value_page_pv"></span> 篇论文</p>
       </div>
 
-      {/* ===== Payment Modal ===== */}
-      {showPayment && (
-        <div className="modal-overlay" onClick={() => setShowPayment(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3>🎓 升级毕过AI会员</h3>
-            <p>毕业季限时优惠，一次解锁全部功能！</p>
+      {/* ===== Share Modal ===== */}
+      {showShareModal && (
+        <div className="modal-overlay" onClick={() => setShowShareModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <h3>📤 邀请好友，双方各得 +3 次</h3>
+            <p>分享链接给好友，TA 通过你的链接访问后，<strong>你和 TA 各获得 3 次额外免费次数</strong>！</p>
 
-            <div style={{ fontSize: 13, background: '#f0fdf4', padding: '10px 14px', borderRadius: 8, marginBottom: 16, lineHeight: 1.6, color: '#166534' }}>
-              ✅ 整篇论文无限次降重 &nbsp;·&nbsp; 每次最多 2 万字<br />
-              ✅ 盲审专区全部开放 &nbsp;·&nbsp; 公式/图表/清单/文献<br />
-              ✅ 查重报告分析 &nbsp;·&nbsp; 高重复段落定位与改写<br />
-              ✅ 参考文献格式整理 &nbsp;·&nbsp; GB/T 7714 自动规范
-            </div>
-
-            <div className="modal-pricing">
-              <div className="pricing-card recommended">
-                <div>
-                  <div className="pricing-name">🎉 毕业季卡 · 最划算</div>
-                  <div style={{ fontSize: 12, color: '#64748b' }}>永久有效，不限次数 · 不限字数 · 全部功能</div>
-                </div>
-                <div>
-                  <span className="pricing-original">¥99</span>
-                  <span className="pricing-price">¥49.9</span>
-                </div>
+            <div style={{
+              background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)',
+              borderRadius: 10,
+              padding: '14px 16px',
+              marginBottom: 16,
+              border: '1px solid #bbf7d0',
+            }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#166534', marginBottom: 8 }}>
+                ✅ 已邀请 <strong>{getShareCount()}</strong> 人 · 今日额外获得 <strong>{getBonusUses()}</strong> 次
               </div>
-              <div className="pricing-card">
-                <div>
-                  <div className="pricing-name">📱 月卡</div>
-                  <div style={{ fontSize: 12, color: '#64748b' }}>30天无限使用</div>
-                </div>
-                <div className="pricing-price">¥29.9</div>
-              </div>
-            </div>
-
-            <div className="qr-area">
-              <p>💳 扫码付款后获取验证码</p>
-              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>
-                支付宝 / 微信 扫码支付
-              </div>
-              <div
-                style={{
-                  width: 180, height: 180, margin: '0 auto', background: '#f0f0f0',
-                  borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 14, color: '#94a3b8', border: '1px solid #e2e8f0',
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: 32, marginBottom: 4 }}>📱</div>
-                  放你的收款码
-                </div>
-              </div>
-              <div className="qr-tip">
-                ⚡ 付款后把「交易单号后6位」粘贴到下面输入框激活
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  className="settings-input"
+                  value={shareLink}
+                  readOnly
+                  style={{ marginBottom: 0, flex: 1, fontSize: 12 }}
+                />
+                <button
+                  className="btn-outline"
+                  style={{ borderColor: '#10b981', color: '#10b981', whiteSpace: 'nowrap' }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(shareLink)
+                    setShareCopied(true)
+                    setTimeout(() => setShareCopied(false), 2000)
+                    addBonusUses(3)
+                    incrementShareCount()
+                    refreshUsage()
+                  }}
+                >
+                  {shareCopied ? '✅ 已复制' : '📋 复制'}
+                </button>
               </div>
             </div>
 
-            <input
-              className="verify-input"
-              placeholder="输入交易单号后6位"
-              value={verifyCode}
-              onChange={e => setVerifyCode(e.target.value)}
-            />
-            <button
-              className="btn-primary"
-              style={{ background: 'linear-gradient(135deg, #f59e0b, #ef4444)' }}
-              onClick={handleVerifyVip}
-            >
-              🔓 验证并激活
-            </button>
-            <button className="btn-close-modal" onClick={() => setShowPayment(false)}>
-              稍后再说
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 8 }}>分享至</div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <button
+                  style={{
+                    width: 48, height: 48, borderRadius: 12, border: 'none',
+                    background: '#07c160', color: 'white', fontSize: 22, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                  onClick={() => {
+                    navigator.clipboard.writeText('论文党必备！毕过AI · ' + shareLink)
+                    showToast('已复制，粘贴到微信分享', 'success')
+                  }}
+                  title="微信"
+                >💬</button>
+                <button
+                  style={{
+                    width: 48, height: 48, borderRadius: 12, border: 'none',
+                    background: '#ff8200', color: 'white', fontSize: 22, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                  onClick={() => {
+                    navigator.clipboard.writeText('论文党必备！毕过AI · ' + shareLink)
+                    showToast('已复制，粘贴到微博分享', 'success')
+                  }}
+                  title="微博"
+                >📢</button>
+                <button
+                  style={{
+                    width: 48, height: 48, borderRadius: 12, border: '1px solid #e2e8f0',
+                    color: '#64748b', fontSize: 22, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(shareLink)
+                    showToast('链接已复制，可分享到任何地方', 'success')
+                  }}
+                  title="复制链接"
+                >🔗</button>
+              </div>
+            </div>
+
+            <button className="btn-close-modal" onClick={() => setShowShareModal(false)}>
+              关闭
             </button>
           </div>
         </div>
       )}
 
-      {/* ===== Settings Modal ===== */}
-      {showSettings && (
-        <div className="modal-overlay" onClick={() => setShowSettings(false)}>
+      {/* ===== Payment Modal ===== */}
+      {showPayment && (
+        <div className="modal-overlay" onClick={() => setShowPayment(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3>⚙️ API 设置</h3>
-            <p>配置你的 API Key（如果默认 key 额度用完，可以自己填）</p>
-
-            <div className="settings-hint">
-              <strong>获取方式：</strong>
-              前往 <a href="https://shiyunapi.com" target="_blank" rel="noopener" style={{ color: '#2563eb' }}>诗云API</a> 注册 →
-              创建 API Key → 复制粘贴到下面。
+            <h3>🚀 ¥9.9 无限使用</h3>
+            <p>解锁全部功能，不限次数不限字数！</p>
+            <div style={{ fontSize: 13, padding: '10px 14px', borderRadius: 8, marginBottom: 16, lineHeight: 1.6, color: '#64748b' }}>
+              ✅ 付款后在下面输入 <strong>6位数字</strong> 即可激活<br />
+              ✅ 不付款也可以输入6位数字（算你支持我了 🫶）
             </div>
 
-            <input
-              className="settings-input"
-              placeholder="sk-..."
-              value={apiKey}
-              onChange={e => setApiKey(e.target.value)}
-            />
+            <div className="qr-area">
+              <p>💳 扫码支付 ¥9.9 自愿支持</p>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+                <div>
+                  <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4, textAlign: 'center' }}>支付宝</div>
+                  <img
+                    src={import.meta.env.BASE_URL + 'qr-alipay.png'}
+                    alt="支付宝"
+                    style={{ width: 140, height: 140, objectFit: 'contain', borderRadius: 8, display: 'block', border: '1px solid #e2e8f0' }}
+                    onError={(e) => { e.currentTarget.style.display = 'none' }}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4, textAlign: 'center' }}>微信</div>
+                  <img
+                    src={import.meta.env.BASE_URL + 'qr-wechat.png'}
+                    alt="微信"
+                    style={{ width: 140, height: 140, objectFit: 'contain', borderRadius: 8, display: 'block', border: '1px solid #e2e8f0' }}
+                    onError={(e) => { e.currentTarget.style.display = 'none' }}
+                  />
+                </div>
+              </div>
+            </div>
 
-            <button
-              className="btn-primary"
-              onClick={() => {
-                setSavedApiKey(apiKey)
-                setShowSettings(false)
-                showToast('API Key 已保存', 'success')
-              }}
-            >
-              💾 保存
+            <div style={{ marginTop: 16 }}>
+              <input
+                className="verify-input"
+                placeholder="输入6位数字激活"
+                value={verifyCode}
+                onChange={e => setVerifyCode(e.target.value)}
+                maxLength={6}
+              />
+              <button
+                className="btn-primary"
+                style={{ background: 'linear-gradient(135deg, #f59e0b, #ef4444)' }}
+                onClick={() => {
+                  if (verifyCode.trim().length >= 6) {
+                    setVip(true)
+                    saveVip(365)
+                    setVerifyCode('')
+                    setShowPayment(false)
+                    showToast('🎉 激活成功！现在可以无限使用了', 'success')
+                    refreshUsage()
+                  } else {
+                    showToast('请输入6位数字', 'warning')
+                  }
+                }}
+              >
+                🔓 激活
+              </button>
+            </div>
+            <button className="btn-close-modal" onClick={() => setShowPayment(false)}>
+              暂不升级
             </button>
-            <button className="btn-close-modal" onClick={() => setShowSettings(false)}>
-              取消
+          </div>
+        </div>
+      )}
+
+      {/* ===== Config Modal (first-time & settings) ===== */}
+      {showConfig && (
+        <div className="modal-overlay" onClick={() => { if (configMode !== 'firstTime') setShowConfig(false) }}>
+          <div className="modal config-modal" onClick={e => e.stopPropagation()}>
+            <h3>{configMode === 'firstTime' ? '🚀 1 分钟完成配置' : '⚙️ 设置'}</h3>
+
+            {configMode === 'firstTime' && (
+              <div style={{ marginBottom: 20 }}>
+                <p style={{ fontSize: 14, color: '#475569', marginBottom: 16, lineHeight: 1.6 }}>
+                  毕过AI 需要连接 AI 接口来生成结果。请按以下步骤操作：
+                </p>
+                <div style={{ background: '#f8fafc', borderRadius: 10, padding: '14px 16px', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 10 }}>
+                    <span style={{ width: 24, height: 24, borderRadius: 12, background: '#2563eb', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>1</span>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>注册获取免费 Key</div>
+                      <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>点击下方按钮，1 分钟注册即送免费额度</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <span style={{ width: 24, height: 24, borderRadius: 12, background: '#2563eb', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>2</span>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>粘贴 Key 并保存</div>
+                      <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>将创建的 Key 粘贴到下方输入框</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* API Address */}
+            <div className="config-field">
+              <label>API 地址</label>
+              <input
+                className="settings-input"
+                value={configApiBase}
+                onChange={e => setConfigApiBase(e.target.value)}
+                placeholder="https://shiyunapi.com/v1"
+                style={{ fontFamily: 'monospace' }}
+              />
+              {configMode === 'firstTime' ? (
+                <div className="config-hint">✅ 已默认填好，无需修改</div>
+              ) : (
+                <div className="config-hint">默认使用诗云 API 地址，一般无需修改</div>
+              )}
+            </div>
+
+            {/* API Key */}
+            <div className="config-field">
+              <label>API Key</label>
+              <div className="password-wrapper">
+                <input
+                  type={configShowPwd ? 'text' : 'password'}
+                  value={configApiKey}
+                  onChange={e => setConfigApiKey(e.target.value)}
+                  placeholder={configMode === 'firstTime' ? '从诗云复制 Key 粘贴到这里' : '粘贴你的诗云 API Key'}
+                />
+                <button
+                  type="button"
+                  className="pwd-toggle-btn"
+                  onClick={() => setConfigShowPwd(!configShowPwd)}
+                >
+                  {configShowPwd ? '🙈 隐藏' : '👁️ 显示'}
+                </button>
+              </div>
+            </div>
+
+            {/* 诗云 Link */}
+            <a
+              href="https://shiyunapi.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="config-link-btn"
+              style={configMode === 'firstTime' ? { padding: '12px 20px', fontSize: 14, fontWeight: 600 } : {}}
+            >
+              🔑 去诗云免费获取 Key
+            </a>
+
+            {/* First-time: Demo fallback */}
+            {configMode === 'firstTime' && (
+              <div style={{ textAlign: 'center', marginTop: 14 }}>
+                <button
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#94a3b8',
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    padding: '4px 8px',
+                  }}
+                  onClick={() => {
+                    setShowConfig(false)
+                    localStorage.setItem(STORAGE_KEY_GUIDE, 'true')
+                    localStorage.setItem(STORAGE_KEY_DEMO, 'true')
+                    setDemoMode(true)
+                    showToast('🎪 已进入体验模式，可先试用 Demo', 'success')
+                  }}
+                >
+                  先不配置，进入体验模式看看效果
+                </button>
+              </div>
+            )}
+
+            {/* Settings-only: Demo mode toggle */}
+            {configMode === 'settings' && (
+              <div className="config-toggle-row">
+                <span className="config-toggle-label">Demo 模式</span>
+                <button
+                  className={`config-toggle-btn${demoMode ? ' active' : ''}`}
+                  onClick={() => {
+                    const next = !demoMode
+                    setDemoMode(next)
+                    localStorage.setItem(STORAGE_KEY_DEMO, String(next))
+                    showToast(next ? '🎪 Demo 模式已开启' : 'Demo 模式已关闭', 'success')
+                  }}
+                >
+                  {demoMode ? '✅ 已开启' : '⬜ 已关闭'}
+                </button>
+              </div>
+            )}
+
+            {/* First-time buttons */}
+            {configMode === 'firstTime' ? (
+              <>
+                <button className="btn-primary" onClick={saveConfig}>
+                  💾 保存并开始使用
+                </button>
+                <button
+                  className="btn-outline"
+                  style={{ width: '100%', marginTop: 8, justifyContent: 'center' }}
+                  onClick={enableDemoAndClose}
+                >
+                  🎪 体验 Demo 模式
+                </button>
+                <button className="btn-close-modal" onClick={dismissGuide}>
+                  稍后再说
+                </button>
+              </>
+            ) : (
+              <>
+                <button className="btn-primary" onClick={saveConfig}>
+                  💾 保存配置
+                </button>
+                <button className="btn-clear" onClick={clearConfig}>
+                  🗑️ 清除配置
+                </button>
+                <button className="btn-close-modal" onClick={() => setShowConfig(false)}>
+                  取消
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ===== Admin Panel (连点5次logo进入) ===== */}
+      {showAdmin && (
+        <div className="modal-overlay" onClick={() => setShowAdmin(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <h3>🔐 管理员后台</h3>
+            <p>配置激活码。有人付款后，给他这个码让他激活。</p>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 6 }}>
+                当前激活码
+              </label>
+              <input
+                className="settings-input"
+                value={adminCode}
+                onChange={e => setAdminCode(e.target.value)}
+                placeholder="输入新的激活码"
+                style={{ fontFamily: 'monospace', fontSize: 18, textAlign: 'center' }}
+              />
+              {adminCode && (
+                <div style={{ marginTop: 8, padding: '8px 10px', background: '#f0fdf4', borderRadius: 8, fontSize: 12, color: '#166534', wordBreak: 'break-all' }}>
+                  <strong>分享链接（发给付款的人）：</strong><br />
+                  <span style={{ fontSize: 11, userSelect: 'all' }}>{window.location.origin + window.location.pathname}?vip={adminCode}</span>
+                  <button
+                    style={{ marginLeft: 8, background: 'none', border: '1px solid #166534', borderRadius: 4, padding: '2px 8px', fontSize: 11, color: '#166534', cursor: 'pointer' }}
+                    onClick={() => {
+                      navigator.clipboard.writeText(window.location.origin + window.location.pathname + '?vip=' + adminCode)
+                      showToast('链接已复制！', 'success')
+                    }}
+                  >
+                    📋 复制
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                className="btn-primary"
+                style={{ flex: 1 }}
+                onClick={() => {
+                  const newCode = 'BIGUO-' + Math.random().toString(36).toUpperCase().slice(2, 8)
+                  setAdminCode(newCode)
+                }}
+              >
+                🎲 随机生成
+              </button>
+              <button
+                className="btn-primary"
+                style={{ flex: 1, background: 'linear-gradient(135deg, var(--success), #059669)' }}
+                onClick={() => {
+                  if (adminCode.length < 4) { showToast('激活码至少4位', 'warning'); return }
+                  setCurrentVipCode(adminCode)
+                  setShowAdmin(false)
+                  showToast(`激活码已更新: ${adminCode}`, 'success')
+                }}
+              >
+                💾 保存
+              </button>
+            </div>
+
+            <div style={{ marginTop: 16, padding: '10px 14px', background: '#fef3c7', borderRadius: 8, fontSize: 12, color: '#92400e', lineHeight: 1.5 }}>
+              <strong>⚠️ 每次有人激活后请更换新码</strong><br />
+              操作：点「随机生成」→「保存」→ 把新码发给付款的人
+            </div>
+
+            <button className="btn-close-modal" onClick={() => setShowAdmin(false)}>
+              关闭
             </button>
           </div>
         </div>
