@@ -190,7 +190,7 @@ AI会根据你提供的论文内容，逐项检查盲审常见扣分点。`,
 const ALL_TABS = [...CORE_TABS, ...REVIEW_TABS]
 
 // ====== Config ======
-const MODEL = import.meta.env.VITE_MODEL || 'gpt-4o'
+const MODEL = import.meta.env.VITE_MODEL || 'deepseek-chat'
 const FREE_DAILY_LIMIT = 5
 const CHAR_LIMIT = 2000
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
@@ -209,7 +209,7 @@ const STORAGE_KEY_DEEPSEEK_KEY = 'deepseek_api_key'
 const STORAGE_KEY_GUIDE = 'hasSeenKeyGuide'
 const STORAGE_KEY_DEMO = 'demo_mode_enabled'
 
-const DEFAULT_API_BASE = 'https://shiyunapi.com/v1'
+const DEFAULT_API_BASE = 'https://api.deepseek.com/v1'
 
 // 默认激活码（你可以随时改这个）
 const DEFAULT_VIP_CODE = 'biguo2026'
@@ -619,7 +619,7 @@ export default function App() {
           }}>
             📋 简历体检
           </a>
-          <button className="settings-btn" onClick={() => window.open('https://shiyunapi.com', '_blank')}>
+          <button className="settings-btn" onClick={() => window.open('https://platform.deepseek.com', '_blank')}>
             ⚙️ API
           </button>
         </div>
@@ -1163,7 +1163,7 @@ export default function App() {
                 className="settings-input"
                 value={configApiBase}
                 onChange={e => setConfigApiBase(e.target.value)}
-                placeholder="https://shiyunapi.com/v1"
+                placeholder="https://platform.deepseek.com/v1"
                 style={{ fontFamily: 'monospace' }}
               />
               {configMode === 'firstTime' ? (
@@ -1195,7 +1195,7 @@ export default function App() {
 
             {/* 诗云 Link */}
             <a
-              href="https://shiyunapi.com"
+              href="https://platform.deepseek.com"
               target="_blank"
               rel="noopener noreferrer"
               className="config-link-btn"

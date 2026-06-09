@@ -2,9 +2,14 @@ import { useState, useCallback } from 'react'
 import { analyzeResume, buildResumePolishPrompt, detectJobCategory, type ATSReport } from './atsEngine'
 
 // ====== Config ======
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://shiyunapi.com/v1'
-const DEFAULT_API_KEY = import.meta.env.VITE_API_KEY || ''
-const MODEL = import.meta.env.VITE_MODEL || 'gpt-4o'
+// 从 localStorage 读取用户配置的 API（与论文助手共享配置）
+function getApiBase(): string {
+  return localStorage.getItem('deepseek_api_base_url') || 'https://api.deepseek.com/v1'
+}
+function getApiKey(): string {
+  return localStorage.getItem('deepseek_api_key') || ''
+}
+const MODEL = 'deepseek-chat'
 const STORAGE_KEY_RESUME_VIP = 'resumechecker_vip'
 const STORAGE_KEY_RESUME_USAGE = 'resumechecker_usage'
 
@@ -138,11 +143,18 @@ export default function ResumeChecker() {
     }
 
     setPolishedLoading(true)
-    const apiKey = DEFAULT_API_KEY
+    const apiKey = getApiKey()
+    const apiBase = getApiBase()
     const prompt = buildResumePolishPrompt(resumeText, report.jdKeywords.map(k => k.keyword), report.missingCore)
 
+    if (!apiKey) {
+      setPolishedResult('⚠️ 请先在「论文助手」页面点击 ⚙️ API 设置，填入你的 DeepSeek API Key。\n\n免费获取：platform.deepseek.com → 注册 → API Keys → 复制粘贴')
+      setPolishedLoading(false)
+      return
+    }
+
     try {
-      const res = await fetch(`${API_BASE}/chat/completions`, {
+      const res = await fetch(`${apiBase}/chat/completions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
         body: JSON.stringify({ model: MODEL, messages: [{ role: 'user', content: prompt }], max_tokens: 2048, temperature: 0.4 }),
