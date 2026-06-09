@@ -625,6 +625,89 @@ export default function App() {
         </div>
       </header>
 
+      {/* ===== ATS 简历体检入口卡片 ===== */}
+      <a href="#resume" style={{ textDecoration: 'none', display: 'block', margin: '12px 0' }}>
+        <div style={{
+          background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 40%, #7c3aed 100%)',
+          borderRadius: 16,
+          padding: '20px 20px 18px',
+          position: 'relative',
+          overflow: 'hidden',
+          boxShadow: '0 4px 24px rgba(37, 99, 235, 0.25)',
+          cursor: 'pointer',
+        }}>
+          {/* 背景装饰 */}
+          <div style={{
+            position: 'absolute', right: -20, top: -30,
+            width: 140, height: 140,
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.08)',
+          }} />
+          <div style={{
+            position: 'absolute', right: 60, top: 20,
+            width: 60, height: 60,
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.06)',
+          }} />
+
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            {/* 顶部标签行 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+              <span style={{
+                background: '#fbbf24', color: '#1e3a5f', fontWeight: 800,
+                padding: '3px 10px', borderRadius: 12, fontSize: 11,
+                animation: 'pulse 2s infinite',
+              }}>
+                🔥 新上线
+              </span>
+              <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>
+                2026届毕业生都在用
+              </span>
+            </div>
+
+            {/* 主标题 */}
+            <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', marginBottom: 4, letterSpacing: 0.5 }}>
+              📋 你的简历能过 AI 筛选吗？
+            </div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', marginBottom: 12, lineHeight: 1.5 }}>
+              粘贴简历 + 岗位JD → 秒出 ATS 匹配度评分 · 关键词缺口检测 · 格式规范检查
+            </div>
+
+            {/* 三个卖点 */}
+            <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+              {[
+                { icon: '🎯', text: '关键词匹配打分' },
+                { icon: '🔍', text: '格式问题检测' },
+                { icon: '📊', text: '对标同岗位竞争力' },
+              ].map(item => (
+                <span key={item.text} style={{
+                  background: 'rgba(255,255,255,0.15)',
+                  color: '#fff', fontSize: 11, fontWeight: 500,
+                  padding: '5px 10px', borderRadius: 8,
+                  backdropFilter: 'blur(4px)',
+                }}>
+                  {item.icon} {item.text}
+                </span>
+              ))}
+            </div>
+
+            {/* CTA 按钮 */}
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: '#fff', color: '#1e40af', fontWeight: 700,
+              padding: '10px 22px', borderRadius: 24, fontSize: 14,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            }}>
+              免费检测我的简历 →
+            </div>
+
+            <div style={{ marginTop: 8, fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>
+              🆓 每日免费 1 次 · 完整报告 ¥6.9 解锁
+            </div>
+          </div>
+        </div>
+      </a>
+
       {/* ===== Info Banner ===== */}
       <div className="info-banner">
         <span>🎓</span>
