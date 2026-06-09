@@ -148,9 +148,13 @@ export function extractKeywordsFromJD(jdText: string, jobCategory?: string): Key
     }
   }
 
-  // 如果JD提取的关键词太少(少于5个)，用全部词库关键词(不做JD匹配过滤)
-  if (keywords.length < 5) {
-    for (const item of allKeywords) {
+  // 如果JD提取的关键词太少(少于3个)，只补充通用关键词，不加载整个词库
+  if (keywords.length < 3) {
+    const fallback = [
+      ...UNIVERSAL_KEYWORDS.core.map(k => ({ kw: k, w: 'core' as const, cat: '通用' })),
+      ...UNIVERSAL_KEYWORDS.secondary.map(k => ({ kw: k, w: 'secondary' as const, cat: '通用' })),
+    ]
+    for (const item of fallback) {
       if (seen.has(item.kw.toLowerCase())) continue
       seen.add(item.kw.toLowerCase())
       keywords.push({
@@ -223,80 +227,106 @@ export function detectJobCategory(jdText: string): string {
   return bestCategory
 }
 
+// ====== 智能关键词匹配（中文模糊匹配） ======
+function matchKeyword(keyword: string, text: string): { found: boolean; count: number } {
+  const lowerKW = keyword.toLowerCase()
+  const lowerText = text.toLowerCase()
+
+  // 精确匹配
+  if (lowerText.includes(lowerKW)) {
+    const regex = new RegExp(lowerKW.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
+    const count = (text.match(regex) || []).length
+    return { found: true, count }
+  }
+
+  // 中文：拆成单字或词素做部分匹配
+  // 2字及以上关键词，超过一半字符出现就算命中
+  if (/[一-鿿]/.test(keyword) && keyword.length >= 2) {
+    const chars = [...keyword]  // 正确处理中文（非BMP字符）
+    let matchedChars = 0
+    for (const ch of chars) {
+      if (lowerText.includes(ch)) matchedChars++
+    }
+    const ratio = matchedChars / chars.length
+    if (ratio >= 0.6) {
+      return { found: true, count: 1 }
+    }
+  }
+
+  // 英文：拆分单词做匹配
+  const englishWords = keyword.split(/[\s/]+/).filter(w => w.length > 2)
+  if (englishWords.length > 1) {
+    const matchedWords = englishWords.filter(w => lowerText.includes(w.toLowerCase()))
+    if (matchedWords.length >= englishWords.length * 0.5) {
+      return { found: true, count: 1 }
+    }
+  }
+
+  return { found: false, count: 0 }
+}
+
 // ====== 核心：简历与JD匹配分析 ======
 export function analyzeResume(resumeText: string, jdText: string, jobCategory?: string): ATSReport {
   const cat = jobCategory || detectJobCategory(jdText)
   const jdKeywords = extractKeywordsFromJD(jdText, cat)
 
   // 简历文本预处理
-  const resumeLower = resumeText.toLowerCase()
   const resumeWords = resumeText.replace(/\s+/g, ' ').split(/\s+/).length
 
-  // 匹配每个关键词
+  // 匹配每个关键词（智能模糊匹配）
   const matches: MatchResult[] = jdKeywords.map(kw => {
-    const found = resumeLower.includes(kw.keyword.toLowerCase())
-    let count = 0
-    if (found) {
-      const regex = new RegExp(kw.keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
-      count = (resumeText.match(regex) || []).length
-    }
+    const { found, count } = matchKeyword(kw.keyword, resumeText)
     const density = resumeWords > 0 ? count / resumeWords : 0
     let warning: string | undefined
 
-    // 关键词密度过高 = ATS判定堆砌
-    if (density > 0.05) {
-      warning = `"${kw.keyword}"出现${count}次，密度过高(${(density * 100).toFixed(1)}%)，可能被ATS判定为关键词堆砌`
+    if (density > 0.08) {
+      warning = `"${kw.keyword}"密度过高(${(density * 100).toFixed(1)}%)，可能被判定为关键词堆砌`
     }
-    // 同一关键词出现超过5次
     if (count > 5) {
-      warning = `"${kw.keyword}"出现${count}次，建议控制在3次以内，避免被判定为作弊`
+      warning = `"${kw.keyword}"出现${count}次，建议控制在3次以内`
     }
 
-    return {
-      keyword: kw.keyword,
-      weight: kw.weight,
-      matched: found,
-      count,
-      density,
-      warning,
-    }
+    return { keyword: kw.keyword, weight: kw.weight, matched: found, count, density, warning }
   })
 
   // 统计
   const coreKeywords = matches.filter(m => m.weight === 'core')
   const secondaryKeywords = matches.filter(m => m.weight === 'secondary')
-  const auxiliaryKeywords = matches.filter(m => m.weight === 'auxiliary')
 
   const coreMatched = coreKeywords.filter(m => m.matched).length
   const secondaryMatched = secondaryKeywords.filter(m => m.matched).length
-  const auxiliaryMatched = auxiliaryKeywords.filter(m => m.matched).length
 
-  // 加权关键词得分(核心60%, 次要25%, 辅助15%)
-  const coreWeighted = coreKeywords.length > 0 ? (coreMatched / coreKeywords.length) * 60 : 30
-  const secondaryWeighted = secondaryKeywords.length > 0 ? (secondaryMatched / secondaryKeywords.length) * 25 : 12.5
-  const auxiliaryWeighted = auxiliaryKeywords.length > 0 ? (auxiliaryMatched / auxiliaryKeywords.length) * 15 : 7.5
-  const keywordScore = Math.round(coreWeighted + secondaryWeighted + auxiliaryWeighted)
+  // ---- 关键词得分（基准40分，匹配越多越高） ----
+  const coreMatchRate = coreKeywords.length > 0 ? coreMatched / coreKeywords.length : 0
+  const secondaryMatchRate = secondaryKeywords.length > 0 ? secondaryMatched / secondaryKeywords.length : 0
 
-  // 格式检查
+  // 核心匹配率权重70%，次要30%
+  const keywordScore = Math.round(40 + coreMatchRate * 40 + secondaryMatchRate * 20)
+  // 封顶100
+  const finalKeywordScore = Math.min(100, keywordScore)
+
+  // ---- 格式检查 ----
   const formatIssues: FormatIssue[] = checkFormat(resumeText)
-
-  // 结构完整性检查
-  const structureIssues: string[] = checkStructure(resumeText)
-  const structureScore = Math.max(0, 100 - structureIssues.length * 25)
-
-  // 格式得分
   const formatErrors = formatIssues.filter(i => i.type === 'error').length
   const formatWarnings = formatIssues.filter(i => i.type === 'warning').length
-  const formatScore = Math.max(0, 100 - formatErrors * 20 - formatWarnings * 10)
+  // 基准60分，每个错误扣10，每个警告扣5
+  const formatScore = Math.max(20, Math.min(100, 60 - formatErrors * 10 - formatWarnings * 5))
 
-  // 总分：关键词60% + 格式25% + 结构15%
-  const totalScore = Math.round(keywordScore * 0.6 + formatScore * 0.25 + structureScore * 0.15)
+  // ---- 结构完整性 ----
+  const structureIssues: string[] = checkStructure(resumeText)
+  // 基准50分，缺一个模块扣15，但有联系人等基础信息加回10
+  const hasContact = /\b1[3-9]\d{9}\b/.test(resumeText) || /[\w.-]+@[\w.-]+\.\w+/.test(resumeText)
+  const structureScore = Math.max(20, Math.min(100, 50 - structureIssues.length * 15 + (hasContact ? 10 : 0)))
 
-  // 等级
+  // ---- 总分 ----
+  // 关键词45% + 格式30% + 结构25%
+  const totalScore = Math.round(finalKeywordScore * 0.45 + formatScore * 0.30 + structureScore * 0.25)
+
+  // ---- 等级 ----
   let level: 'excellent' | 'good' | 'moderate' | 'weak'
-  if (totalScore >= 85) level = 'excellent'
-  else if (totalScore >= 70) level = 'good'
-  else if (totalScore >= 50) level = 'moderate'
+  if (totalScore >= 80) level = 'excellent'
+  else if (totalScore >= 65) level = 'good'
+  else if (totalScore >= 45) level = 'moderate'
   else level = 'weak'
 
   // 缺失关键词
@@ -308,15 +338,18 @@ export function analyzeResume(resumeText: string, jdText: string, jobCategory?: 
 
   // ATS 优化建议
   const atsTips = generateATSTips({
-    totalScore, keywordScore, formatScore, structureScore,
+    totalScore, keywordScore: finalKeywordScore, formatScore, structureScore,
     missingCore, densityWarnings, formatIssues, structureIssues,
   })
 
-  // 针对性改进建议（可操作的修改）
+  // 针对性改进建议
   const improvedSections = generateImprovements(resumeText, missingCore, missingSecondary, formatIssues)
 
   return {
-    totalScore, level, keywordScore, formatScore, structureScore,
+    totalScore, level,
+    keywordScore: finalKeywordScore,
+    formatScore,
+    structureScore,
     jdKeywords, matches,
     missingCore, missingSecondary, densityWarnings,
     formatIssues, structureIssues,
