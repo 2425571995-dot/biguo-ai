@@ -2,9 +2,9 @@ import { useState, useCallback } from 'react'
 import { analyzeResume, buildResumePolishPrompt, detectJobCategory, type ATSReport } from './atsEngine'
 
 // ====== Config ======
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://shiyunapi.com/v1'
-const DEFAULT_API_KEY = import.meta.env.VITE_API_KEY || ''
-const MODEL = import.meta.env.VITE_MODEL || 'gpt-4o'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.deepseek.com/v1'
+const DEFAULT_API_KEY = import.meta.env.VITE_API_KEY || 'sk-8f4ead7949094d65968eb6c56abe31ce'
+const MODEL = import.meta.env.VITE_MODEL || 'deepseek-chat'
 const STORAGE_KEY_RESUME_VIP = 'resumechecker_vip'
 const STORAGE_KEY_RESUME_USAGE = 'resumechecker_usage'
 
