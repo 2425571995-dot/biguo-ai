@@ -91,6 +91,7 @@ export default function ResumeChecker() {
   const [showPayment, setShowPayment] = useState(false)
   const [verifyCode, setVerifyCode] = useState('')
   const [vip, setVip] = useState(isVip())
+  const [selectedPlan, setSelectedPlan] = useState<365 | 30>(365) // 默认选中永久卡
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['keywords', 'format']))
 
   const dailyUsed = getDailyUsage()
@@ -157,13 +158,20 @@ export default function ResumeChecker() {
   }, [report, resumeText, vip])
 
   // VIP 验证
-  const handleVerify = (days: number) => {
-    if (verifyCode.trim().length >= 4) {
-      localStorage.setItem(STORAGE_KEY_RESUME_VIP, JSON.stringify({ expires: Date.now() + days * 86400000 }))
-      setVip(true)
-      setVerifyCode('')
-      setShowPayment(false)
+  const handleVerify = () => {
+    if (verifyCode.trim().length < 4) {
+      // 轻提示
+      const el = document.createElement('div')
+      el.textContent = '请先输入交易单号后6位'
+      el.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1e293b;color:#fff;padding:12px 24px;border-radius:24px;font-size:14px;z-index:9999;pointer-events:none;'
+      document.body.appendChild(el)
+      setTimeout(() => el.remove(), 2000)
+      return
     }
+    localStorage.setItem(STORAGE_KEY_RESUME_VIP, JSON.stringify({ expires: Date.now() + selectedPlan * 86400000 }))
+    setVip(true)
+    setVerifyCode('')
+    setShowPayment(false)
   }
 
   const handleCopy = async (text: string, label: string) => {
@@ -530,7 +538,16 @@ export default function ResumeChecker() {
             </p>
 
             <div className="modal-pricing">
-              <div className="pricing-card recommended" onClick={() => handleVerify(365)} style={{ cursor: 'pointer' }}>
+              <div
+                className={`pricing-card recommended`}
+                onClick={() => setSelectedPlan(365)}
+                style={{
+                  cursor: 'pointer',
+                  outline: selectedPlan === 365 ? '3px solid #2563eb' : 'none',
+                  background: selectedPlan === 365 ? '#eff6ff' : undefined,
+                  transition: 'all 0.15s',
+                }}
+              >
                 <div>
                   <div className="pricing-name">🎓 永久卡 · 最划算</div>
                   <div style={{ fontSize: 11, color: '#64748b' }}>永久有效 · 无限检测 · AI改写 · 自动更新</div>
@@ -540,7 +557,16 @@ export default function ResumeChecker() {
                   <span className="pricing-price">¥19.9</span>
                 </div>
               </div>
-              <div className="pricing-card" onClick={() => handleVerify(30)} style={{ cursor: 'pointer' }}>
+              <div
+                className="pricing-card"
+                onClick={() => setSelectedPlan(30)}
+                style={{
+                  cursor: 'pointer',
+                  outline: selectedPlan === 30 ? '3px solid #2563eb' : 'none',
+                  background: selectedPlan === 30 ? '#eff6ff' : undefined,
+                  transition: 'all 0.15s',
+                }}
+              >
                 <div>
                   <div className="pricing-name">📱 月卡</div>
                   <div style={{ fontSize: 11, color: '#64748b' }}>30天无限使用</div>
@@ -550,22 +576,26 @@ export default function ResumeChecker() {
             </div>
 
             <div className="qr-area" style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: 13, fontWeight: 600 }}>💳 扫码付款 · ¥6.9 / ¥19.9</p>
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 8 }}>
+              <p style={{ fontSize: 13, fontWeight: 600 }}>
+                💳 扫码付款 · 已选：{selectedPlan === 365 ? '永久卡 ¥19.9' : '月卡 ¥6.9'}
+              </p>
+              <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 10, flexWrap: 'wrap' }}>
                 <div style={{ textAlign: 'center' }}>
                   <img src="/qr-alipay.png" alt="支付宝付款" style={{
-                    width: 140, height: 140, borderRadius: 8, border: '1px solid #e2e8f0', objectFit: 'contain'
+                    width: 200, height: 200, borderRadius: 12, border: '2px solid #e2e8f0', objectFit: 'contain',
+                    background: '#fff',
                   }} />
-                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>支付宝</div>
+                  <div style={{ fontSize: 12, color: '#334155', marginTop: 6, fontWeight: 500 }}>支付宝扫码</div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
                   <img src="/qr-wechat.png" alt="微信付款" style={{
-                    width: 140, height: 140, borderRadius: 8, border: '1px solid #e2e8f0', objectFit: 'contain'
+                    width: 200, height: 200, borderRadius: 12, border: '2px solid #e2e8f0', objectFit: 'contain',
+                    background: '#fff',
                   }} />
-                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>微信</div>
+                  <div style={{ fontSize: 12, color: '#334155', marginTop: 6, fontWeight: 500 }}>微信扫码</div>
                 </div>
               </div>
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 8 }}>付款后将交易单号后6位填入下方激活</div>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 10 }}>付款完成后，将交易单号后6位填入下方</div>
             </div>
 
             <input
@@ -573,12 +603,12 @@ export default function ResumeChecker() {
               placeholder="输入交易单号后6位验证"
               value={verifyCode}
               onChange={e => setVerifyCode(e.target.value)}
-              style={{ marginTop: 8 }}
+              style={{ marginTop: 10, fontSize: 15, textAlign: 'center', letterSpacing: 2 }}
             />
             <button
               className="btn-primary"
-              style={{ width: '100%', marginTop: 8, background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}
-              onClick={() => handleVerify(365)}
+              style={{ width: '100%', marginTop: 10, background: 'linear-gradient(135deg, #2563eb, #7c3aed)', padding: '14px', fontSize: 16 }}
+              onClick={handleVerify}
             >
               🔓 解锁完整报告
             </button>
