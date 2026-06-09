@@ -550,18 +550,22 @@ export default function ResumeChecker() {
             </div>
 
             <div className="qr-area" style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: 13, fontWeight: 600 }}>💳 扫码付款后输入验证码</p>
-              <div style={{
-                width: 160, height: 160, margin: '8px auto', background: '#f8fafc',
-                borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: '1px solid #e2e8f0',
-              }}>
-                <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
-                  <div style={{ fontSize: 32 }}>📱</div>
-                  放你的收款码
+              <p style={{ fontSize: 13, fontWeight: 600 }}>💳 扫码付款 · ¥6.9 / ¥19.9</p>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 8 }}>
+                <div style={{ textAlign: 'center' }}>
+                  <img src="/qr-alipay.png" alt="支付宝付款" style={{
+                    width: 140, height: 140, borderRadius: 8, border: '1px solid #e2e8f0', objectFit: 'contain'
+                  }} />
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>支付宝</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <img src="/qr-wechat.png" alt="微信付款" style={{
+                    width: 140, height: 140, borderRadius: 8, border: '1px solid #e2e8f0', objectFit: 'contain'
+                  }} />
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>微信</div>
                 </div>
               </div>
-              <div style={{ fontSize: 11, color: '#94a3b8' }}>付款后将交易单号后6位填入下方</div>
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 8 }}>付款后将交易单号后6位填入下方激活</div>
             </div>
 
             <input
