@@ -18,10 +18,10 @@ interface TabInfo {
 
 const CORE_TABS: TabInfo[] = [
   {
-    key: 'jiangchong', label: '降重', icon: '✂️', group: 'core', needsImage: false,
-    placeholder: '粘贴需要降重的论文段落...\n\nAI会保持原意同时改变句式、替换同义词，有效降低查重率。',
-    systemPrompt: '你是一个论文降重专家。\n要求：\n1. 保持原意的100%准确性\n2. 改变句式结构（主动变被动、拆分长句、重组语序）\n3. 替换同义词\n4. 保持学术语体\n5. 只输出改写后的文本，不要任何解释',
-    btnLabel: '🚀 开始降重',
+    key: 'jiangchong', label: '优化表达', icon: '✂️', group: 'core', needsImage: false,
+    placeholder: '粘贴需要优化表达的论文段落...\n\nAI会保持原意同时改变句式、替换同义词，降低重复表达、提升学术性。',
+    systemPrompt: '你是一个论文表达优化专家。\n要求：\n1. 保持原意的100%准确性\n2. 改变句式结构（主动变被动、拆分长句、重组语序）\n3. 替换同义词\n4. 保持学术语体\n5. 只输出改写后的文本，不要任何解释',
+    btnLabel: '🚀 开始优化',
   },
   {
     key: 'runshe', label: '润色', icon: '✨', group: 'core', needsImage: false,
@@ -31,7 +31,7 @@ const CORE_TABS: TabInfo[] = [
   },
   {
     key: 'gaixie', label: '改写', icon: '🔄', group: 'core', needsImage: false,
-    placeholder: '粘贴需要改写的论文段落...\n\nAI会用完全不同的句式结构重新表达，适合大段降重。',
+    placeholder: '粘贴需要改写的论文段落...\n\nAI会用完全不同的句式结构重新表达，适合大段重构表述。',
     systemPrompt: '你是一个论文改写专家。\n要求：\n1. 彻底重构句子结构\n2. 保持核心信息和学术观点100%准确\n3. 输出2个版本用---版本二---分隔\n4. 直接输出结果',
     btnLabel: '🔄 开始改写',
   },
@@ -218,7 +218,7 @@ const DEFAULT_VIP_CODE = 'biguo2026'
 const DEMO_INPUT = '随着互联网技术的快速发展，人工智能在教育领域中的应用越来越广泛。通过对学习数据的分析，人工智能能够为学生提供更加个性化的学习建议，从而提高学习效率和教学质量。'
 const DEMO_OUTPUT = '随着互联网技术的持续进步，人工智能在教育场景中的应用范围不断扩大。借助对学习行为和相关数据的分析，人工智能能够为学生提供更具针对性的学习建议，从而在一定程度上提升学习效率与教学质量。'
 const DEMO_NOTE = '已调整句式结构，替换部分重复表达，并增强了论文表述的自然度和学术感。'
-const CORE_PLACEHOLDER = '粘贴需要降重的论文段落，建议 100–800 字。\n\nAI 将在保留原意的基础上调整句式、替换重复表达，并优化为更自然的学术表达。'
+const CORE_PLACEHOLDER = '粘贴需要优化表达的论文段落，建议 100–800 字。\n\nAI 将在保留原意的基础上调整句式、替换重复表达，并优化为更自然的学术表达。'
 
 // ====== Helpers ======
 function getTodayStr(): string {
@@ -435,7 +435,7 @@ export default function App() {
 
     // Validate
     if (!text && !imagePreview) {
-      showToast(currentTab.needsImage ? '请先上传截图或输入说明' : '请先粘贴需要降重的论文段落', 'warning')
+      showToast(currentTab.needsImage ? '请先上传截图或输入说明' : '请先粘贴需要优化表达的论文段落', 'warning')
       return
     }
 
@@ -495,8 +495,8 @@ export default function App() {
         let systemPrompt = currentTab.systemPrompt
         if (tab === 'jiangchong' && intensity !== '中度') {
           const intensityMap: Record<string, string> = {
-            '轻度': '\n\n【强度要求】轻度降重：轻微调整句式，保持原文风格，降重率约10-20%。',
-            '强力': '\n\n【强度要求】强力降重：大幅改写句式，彻底重组语序，降重率约50-70%。',
+            '轻度': '\n\n【强度要求】轻度改写：轻微调整句式，保持原文风格，表述更自然。',
+            '强力': '\n\n【强度要求】强力改写：大幅重组句式，彻底调整语序，表达差异更明显。',
           }
           systemPrompt += intensityMap[intensity] || ''
         }
@@ -612,6 +612,13 @@ export default function App() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <a href="#aigc" style={{
+            fontSize: 12, color: '#dc2626', textDecoration: 'none',
+            padding: '4px 10px', borderRadius: 14, background: '#fef2f2',
+            fontWeight: 500,
+          }}>
+            🔬 AIGC自查
+          </a>
           <a href="#resume" style={{
             fontSize: 12, color: '#2563eb', textDecoration: 'none',
             padding: '4px 10px', borderRadius: 14, background: '#eff6ff',
@@ -708,11 +715,42 @@ export default function App() {
         </div>
       </a>
 
+      {/* ===== AIGC 自查入口卡片 ===== */}
+      <a href="#aigc" style={{ textDecoration: 'none', display: 'block', margin: '12px 0' }}>
+        <div style={{
+          background: 'linear-gradient(135deg, #7c2d12 0%, #dc2626 55%, #f59e0b 100%)',
+          borderRadius: 16,
+          padding: '18px 20px 16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 12,
+          boxShadow: '0 4px 24px rgba(220, 38, 38, 0.2)',
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <span style={{ fontSize: 18, fontWeight: 800, color: '#fff' }}>🔬 论文 AIGC 痕迹自查</span>
+              <span style={{ background: '#fbbf24', color: '#7c2d12', fontWeight: 800, padding: '2px 9px', borderRadius: 12, fontSize: 11 }}>🆓 完全不限次</span>
+            </div>
+            <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.85)', lineHeight: 1.5 }}>
+              查重过了≠能过：粘贴段落秒出风险分，逐句标红「AI味」句子 + 给出改法 · 纯本地检测不上传
+            </div>
+          </div>
+          <div style={{
+            background: '#fff', color: '#b91c1c', fontWeight: 700,
+            padding: '9px 20px', borderRadius: 22, fontSize: 13, whiteSpace: 'nowrap',
+          }}>
+            测测我的论文 →
+          </div>
+        </div>
+      </a>
+
       {/* ===== Info Banner ===== */}
       <div className="info-banner">
         <span>🎓</span>
         <div>
-          论文初稿别急着提交：先降重、再润色、最后做提交前检查。今日免费 <strong>{FREE_DAILY_LIMIT} 次</strong>，分享好友 +3 次 👇
+          论文初稿别急着提交：先优化表达、再润色、最后做提交前规范检查。今日免费 <strong>{FREE_DAILY_LIMIT} 次</strong>，分享好友 +3 次 👇
         </div>
       </div>
 
@@ -822,7 +860,7 @@ export default function App() {
         {!isReviewTab && (
           <>
             <div className="intensity-row">
-              <span className="intensity-label">降重强度</span>
+              <span className="intensity-label">改写强度</span>
               <div className="intensity-options">
                 {['轻度', '中度', '强力'].map((level) => (
                   <button
@@ -830,7 +868,7 @@ export default function App() {
                     className={`intensity-btn${intensity === level ? ' active' : ''}`}
                     onClick={() => {
                       setIntensity(level)
-                      showToast(`已选择「${level}」降重`, 'success')
+                      showToast(`已选择「${level}」改写`, 'success')
                     }}
                   >
                     {level}
@@ -911,7 +949,7 @@ export default function App() {
                 className="btn-action outline"
                 onClick={() => { setInput(output); window.scrollTo({ top: 0, behavior: 'smooth' }); showToast('📋 结果已填回输入框', 'success') }}
               >
-                🔄 继续降重
+                🔄 继续优化
               </button>
               <button
                 className="btn-action outline"
@@ -955,15 +993,15 @@ export default function App() {
           >
             🎁 分享得 +3 次
           </button>
-          <button className="btn-upgrade" onClick={() => setShowPayment(true)}>
-            ⭐ 开通无限次 ¥9.9
-          </button>
+            <button className="btn-upgrade" onClick={() => setShowPayment(true)}>
+              ⭐ 人工论文审查 ¥49
+            </button>
         </div>
       </div>
 
       {/* ===== Footer ===== */}
       <div className="footer">
-        <p>📖 毕过AI · 专注毕业论文降重、润色与提交前检查</p>
+        <p>📖 毕过AI · 专注毕业论文优化表达、润色与提交前规范检查</p>
         <p style={{ marginTop: 4, color: '#94a3b8' }}>访客 <span id="busuanzi_value_site_pv"></span> 次 ｜ 已服务 <span id="busuanzi_value_page_pv"></span> 篇论文</p>
       </div>
 
@@ -1061,11 +1099,11 @@ export default function App() {
       {showPayment && (
         <div className="modal-overlay" onClick={() => setShowPayment(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3>🚀 ¥9.9 无限使用</h3>
-            <p>解锁全部功能，不限次数不限字数！</p>
+            <h3>📋 人工论文审查服务</h3>
+            <p>工科论文格式 + 盲审要点 + 参考文献规范，人工 + AI 审查，交付报告</p>
             <div style={{ fontSize: 13, padding: '10px 14px', borderRadius: 8, marginBottom: 16, lineHeight: 1.6, color: '#64748b' }}>
-              ✅ 付款后在下面输入 <strong>6位数字</strong> 即可激活<br />
-              ✅ 不付款也可以输入6位数字（算你支持我了 🫶）
+              ✅ 这是<strong>一次性支持</strong>，付款后输入 6 位交易单号后 4 位标记已购<br />
+              ✅ 不付款也能用全部基础功能，支持一下更好 🫶
             </div>
 
             <div className="qr-area">
