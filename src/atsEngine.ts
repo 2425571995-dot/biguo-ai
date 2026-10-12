@@ -93,6 +93,18 @@ const JOB_KEYWORDS: Record<string, { core: string[]; secondary: string[]; auxili
     secondary: ['ERP系统', '现金流量表', '利润表', '资产负债表', '内控', '财务建模', '汇算清缴', '成本核算'],
     auxiliary: ['用友/金蝶', 'Excel高级', '税务申报', '发票管理', '银行对账', '固定资产管理'],
   },
+  // 机械设计/制造（工科）
+  'mechanical-engineering': {
+    core: ['机械设计', 'CAD', 'SolidWorks', '公差配合', '尺寸链', '装配图', '工程图', '有限元分析', '材料力学', '机械加工工艺'],
+    secondary: ['三维建模', '二维图纸', '形位公差', '热处理', '焊接工艺', '数控编程', 'CNC', '质量控制', '工艺规程', '夹具设计'],
+    auxiliary: ['AutoCAD', 'UG/NX', 'ProE/Creo', 'ANSYS', '金工实习', '模具设计', '生产实习', '机械原理', '机械制造'],
+  },
+  // 机电/自动化控制（工科·机械电子工程）
+  'mechatronics-automation': {
+    core: ['PLC', '西门子S7-1200', 'TIA Portal', '电气控制', '运动控制', '梯形图', '伺服系统', '变频器', 'HMI', '工业通信'],
+    secondary: ['自动化生产线', '传感器', '执行器', '继电控制', 'PID控制', '组态软件', '工业机器人', 'Profinet', 'Modbus', '故障诊断'],
+    auxiliary: ['单片机', 'STM32', 'LabVIEW', 'WinCC', '机器视觉', '分拣系统', '机械手', '电气图纸', 'EPLAN'],
+  },
 }
 
 // 通用关键词（所有岗位普遍加分）
@@ -184,6 +196,9 @@ function extractExtraKeywords(jdText: string): string[] {
     /\b(PMP|CFA|CPA|AWS认证|RHCE|CCIE|ACCA|FRM|建造师)\b/gi,
     // 中文技术词
     /\b(机器学习|深度学习|自然语言处理|计算机视觉|推荐系统|知识图谱)\b/g,
+    // 工科/机械电子
+    /\b(SolidWorks|AutoCAD|UG|NX|Creo|ANSYS|EPLAN|TIA Portal|S7-1200|STM32|LabVIEW|WinCC)\b/gi,
+    /\b(西门子|PLC|梯形图|伺服|变频器|组态|机器视觉|有限元|公差配合|电气控制)\b/g,
   ]
 
   const found: string[] = []
@@ -209,6 +224,8 @@ export function detectJobCategory(jdText: string): string {
     'hr': ['HR', '人力资源', '招聘', '员工关系', '人事'],
     'marketing': ['市场', '品牌', '营销', '品牌推广', '市场经理'],
     'finance': ['财务', '会计', '审计', '税务', '出纳'],
+    'mechanical-engineering': ['机械设计', '机械工程师', '结构设计', 'SolidWorks', '工艺工程师', '制造', '机械加工'],
+    'mechatronics-automation': ['自动化', 'PLC', '电气', '控制工程师', '机电', '嵌入式', '西门子', '电控'],
   }
 
   let bestCategory = ''

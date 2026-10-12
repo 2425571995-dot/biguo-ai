@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, type ReactNode } from 'react'
 import { analyzeResume, buildResumePolishPrompt, detectJobCategory, type ATSReport } from './atsEngine'
 
 // ====== Config ======
@@ -11,11 +11,16 @@ function getApiKey(): string {
 }
 const MODEL = 'deepseek-chat'
 const STORAGE_KEY_RESUME_VIP = 'resumechecker_vip'
-const STORAGE_KEY_RESUME_USAGE = 'resumechecker_usage'
 
-function getTodayStr(): string {
-  return new Date().toISOString().slice(0, 10)
-}
+// 免费可见的关键词缺口数量，第 4 个起锁定
+const FREE_KEYWORD_LIMIT = 3
+// ¥6.9 解锁 = 30 天会员，会员期内不限次查看完整报告
+const VIP_DAYS = 30
+
+// TODO(用户): 填入闲鱼人工精修商品链接
+// 人工简历精修服务下单链接（留空则弹窗引导去闲鱼搜索"毕过AI"）
+const SERVICE_URL = ''
+const SERVICE_PRICE_TEXT = '¥49 起'
 
 function isVip(): boolean {
   try {
@@ -25,18 +30,30 @@ function isVip(): boolean {
   } catch { return false }
 }
 
-function getDailyUsage(): number {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_RESUME_USAGE)
-    if (!raw) return 0
-    const data = JSON.parse(raw)
-    return data.date === getTodayStr() ? data.count : 0
-  } catch { return 0 }
-}
-
-function incrementUsage() {
-  const data = { date: getTodayStr(), count: getDailyUsage() + 1 }
-  localStorage.setItem(STORAGE_KEY_RESUME_USAGE, JSON.stringify(data))
+// ====== Locked Section Component ======
+// 未解锁时以毛玻璃遮罩盖住内容，点击解锁
+function LockedSection({ locked, hint, onUnlock, children }: {
+  locked: boolean; hint: string; onUnlock: () => void; children: ReactNode
+}) {
+  if (!locked) return <>{children}</>
+  return (
+    <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden' }}>
+      <div style={{ filter: 'blur(5px)', opacity: 0.45, pointerEvents: 'none', userSelect: 'none' }} aria-hidden="true">
+        {children}
+      </div>
+      <div
+        onClick={onUnlock}
+        style={{
+          position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer',
+          background: 'rgba(248,250,252,0.55)', padding: 12, textAlign: 'center',
+        }}
+      >
+        <span style={{ fontSize: 20 }}>🔒</span>
+        <span style={{ fontSize: 13, fontWeight: 600, color: '#2563eb' }}>{hint}</span>
+      </div>
+    </div>
+  )
 }
 
 // ====== Score Ring Component ======
@@ -73,6 +90,8 @@ function ScoreRing({ score, size = 140 }: { score: number; size?: number }) {
 // ====== Job Category Selector ======
 const JOB_CATEGORIES = [
   { value: '', label: '🤖 自动识别' },
+  { value: 'mechanical-engineering', label: '⚙️ 机械/制造（工科）' },
+  { value: 'mechatronics-automation', label: '🔌 机电/自动化（工科）' },
   { value: 'product-manager', label: '📱 产品经理' },
   { value: 'java-dev', label: '☕ Java开发' },
   { value: 'frontend', label: '🎨 前端开发' },
@@ -94,14 +113,10 @@ export default function ResumeChecker() {
   const [polishedLoading, setPolishedLoading] = useState(false)
   const [copied, setCopied] = useState('')
   const [showPayment, setShowPayment] = useState(false)
+  const [showService, setShowService] = useState(false)
   const [verifyCode, setVerifyCode] = useState('')
   const [vip, setVip] = useState(isVip())
-  const [selectedPlan, setSelectedPlan] = useState<365 | 30>(365) // 默认选中永久卡
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['keywords', 'format']))
-
-  const dailyUsed = getDailyUsage()
-  const dailyLimit = 1
-  const remaining = Math.max(0, dailyLimit - dailyUsed)
 
   const toggleSection = (s: string) => {
     const next = new Set(expandedSections)
@@ -109,16 +124,27 @@ export default function ResumeChecker() {
     setExpandedSections(next)
   }
 
-  // 免费版能看到的内容
-  const isFreeReport = !vip && report !== null && dailyUsed >= dailyLimit
+  // 全部关键词缺口（核心在前 + 次要），前 FREE_KEYWORD_LIMIT 个免费可见，其余锁定
+  const missingItems = report
+    ? [
+        ...report.missingCore.map(k => ({ k, core: true })),
+        ...report.missingSecondary.map(k => ({ k, core: false })),
+      ]
+    : []
+  const freeMissing = missingItems.slice(0, FREE_KEYWORD_LIMIT)
+  const lockedMissing = missingItems.slice(FREE_KEYWORD_LIMIT)
+  // 锁定内容计数，用于「还有 N 项完整诊断」
+  const lockedCount = report
+    ? lockedMissing.length
+      + report.formatIssues.filter(i => i.type !== 'ok').length
+      + report.structureIssues.length
+      + report.atsTips.length
+      + report.improvedSections.length
+    : 0
 
-  // 分析简历
+  // 分析简历（引擎纯本地零成本，不设次数限制）
   const handleAnalyze = useCallback(() => {
     if (!resumeText.trim() || !jdText.trim()) return
-    if (!vip && dailyUsed >= dailyLimit) {
-      setShowPayment(true)
-      return
-    }
 
     setLoading(true)
     setReport(null)
@@ -130,9 +156,8 @@ export default function ResumeChecker() {
       const result = analyzeResume(resumeText, jdText, cat)
       setReport(result)
       setLoading(false)
-      if (!vip) incrementUsage()
     }, 100)
-  }, [resumeText, jdText, jobCategory, vip, dailyUsed])
+  }, [resumeText, jdText, jobCategory])
 
   // AI 润色简历
   const handlePolish = useCallback(async () => {
@@ -184,7 +209,7 @@ export default function ResumeChecker() {
     // 如果是会员码（BG开头），走恢复流程
     if (code.startsWith('BG') && code.length >= 8) {
       localStorage.setItem(STORAGE_KEY_RESUME_VIP, JSON.stringify({
-        expires: Date.now() + 30 * 86400000,
+        expires: Date.now() + VIP_DAYS * 86400000,
         memberCode: code,
       }))
       setVip(true)
@@ -195,7 +220,7 @@ export default function ResumeChecker() {
         <div style="background:#fff;border-radius:16px;padding:24px;max-width:340px;text-align:center;margin:16px;">
           <div style="font-size:40px;margin-bottom:8px;">🎉</div>
           <div style="font-size:16px;font-weight:700;margin-bottom:4px;">会员已恢复！</div>
-          <div style="font-size:13px;color:#64748b;margin-bottom:12px;">有效期至 ${new Date(Date.now() + 30 * 86400000).toLocaleDateString()}</div>
+          <div style="font-size:13px;color:#64748b;margin-bottom:12px;">有效期至 ${new Date(Date.now() + VIP_DAYS * 86400000).toLocaleDateString()}</div>
           <button style="width:100%;padding:12px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;" onclick="this.closest('[style*=\"fixed\"]').remove()">开始使用</button>
         </div>
       </div>`
@@ -205,7 +230,7 @@ export default function ResumeChecker() {
 
     // 从输入码派生出会员码（取后8位+固定盐做简单hash）
     const memberCode = 'BG' + simpleHash(code).toUpperCase().slice(0, 10)
-    const expires = Date.now() + selectedPlan * 86400000
+    const expires = Date.now() + VIP_DAYS * 86400000
 
     localStorage.setItem(STORAGE_KEY_RESUME_VIP, JSON.stringify({ expires, memberCode }))
     setVip(true)
@@ -258,6 +283,10 @@ export default function ResumeChecker() {
           </a>
           <span style={{
             fontSize: 11, padding: '4px 10px', borderRadius: 14,
+            background: '#eff6ff', color: '#2563eb', fontWeight: 600,
+          }}>⚙️ 工科生专属引擎</span>
+          <span style={{
+            fontSize: 11, padding: '4px 10px', borderRadius: 14,
             background: '#f0fdf4', color: '#16a34a', fontWeight: 500,
           }}>🟢 Beta</span>
         </div>
@@ -271,7 +300,7 @@ export default function ResumeChecker() {
           marginTop: 10, padding: '6px 14px', borderRadius: 20, background: '#fef3c7',
           display: 'inline-block', fontSize: 12, color: '#92400e',
         }}>
-          {vip ? '👑 会员 · 无限使用' : `🎁 每日免费 ${remaining}/${dailyLimit} 次 · 完整报告 ¥6.9`}
+          {vip ? '👑 会员 · 无限使用' : '🔍 评分免费 · 完整报告 ¥6.9 解锁'}
         </div>
       </div>
 
@@ -374,44 +403,72 @@ export default function ResumeChecker() {
                   </div>
                 </div>
 
-                {/* Missing Core Keywords */}
-                {report.missingCore.length > 0 && (
+                {/* 免费可见：前 3 个关键词缺口 */}
+                {freeMissing.length > 0 && (
                   <div style={{ marginBottom: 12 }}>
                     <div style={{ fontWeight: 600, fontSize: 13, color: '#ef4444', marginBottom: 6 }}>
-                      ❌ 缺失核心关键词（必须补充）
+                      ❌ 优先补充的关键词（前 {freeMissing.length} 个 · 免费）
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      {report.missingCore.map(k => (
+                      {freeMissing.map(({ k, core }) => (
                         <span key={k} style={{
-                          padding: '4px 10px', background: '#fef2f2', color: '#ef4444',
-                          borderRadius: 16, fontSize: 12, border: '1px solid #fecaca',
+                          padding: '4px 10px',
+                          background: core ? '#fef2f2' : '#fffbeb',
+                          color: core ? '#ef4444' : '#92400e',
+                          borderRadius: 16, fontSize: 12,
+                          border: `1px solid ${core ? '#fecaca' : '#fde68a'}`,
                         }}>{k}</span>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* Missing Secondary Keywords (free: show first 2; vip: all) */}
-                {report.missingSecondary.length > 0 && (
+                {/* 锁定：第 4 个起的关键词缺口 */}
+                {!vip && lockedMissing.length > 0 && (
+                  <div style={{ marginTop: 4 }}>
+                    <LockedSection
+                      locked
+                      hint={`🔓 还有 ${lockedMissing.length} 个关键词缺口 · ¥6.9 解锁`}
+                      onUnlock={() => setShowPayment(true)}
+                    >
+                      <div style={{ padding: '4px 0' }}>
+                        <div style={{ marginBottom: 10 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13, color: '#ef4444', marginBottom: 6 }}>
+                            ❌ 其余关键词缺口
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {lockedMissing.map(({ k, core }) => (
+                              <span key={k} style={{
+                                padding: '4px 10px',
+                                background: core ? '#fef2f2' : '#fffbeb',
+                                color: core ? '#ef4444' : '#92400e',
+                                borderRadius: 16, fontSize: 12,
+                                border: `1px solid ${core ? '#fecaca' : '#fde68a'}`,
+                              }}>{k}</span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </LockedSection>
+                  </div>
+                )}
+
+                {/* VIP 可见：全部关键词缺口 */}
+                {vip && lockedMissing.length > 0 && (
                   <div style={{ marginBottom: 12 }}>
-                    <div style={{ fontWeight: 600, fontSize: 13, color: '#f59e0b', marginBottom: 6 }}>
-                      ⚡ 缺失次要关键词
+                    <div style={{ fontWeight: 600, fontSize: 13, color: '#ef4444', marginBottom: 6 }}>
+                      ❌ 其余关键词缺口
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      {(isFreeReport ? report.missingSecondary.slice(0, 2) : report.missingSecondary).map(k => (
+                      {lockedMissing.map(({ k, core }) => (
                         <span key={k} style={{
-                          padding: '4px 10px', background: '#fffbeb', color: '#92400e',
-                          borderRadius: 16, fontSize: 12, border: '1px solid #fde68a',
+                          padding: '4px 10px',
+                          background: core ? '#fef2f2' : '#fffbeb',
+                          color: core ? '#ef4444' : '#92400e',
+                          borderRadius: 16, fontSize: 12,
+                          border: `1px solid ${core ? '#fecaca' : '#fde68a'}`,
                         }}>{k}</span>
                       ))}
-                      {isFreeReport && report.missingSecondary.length > 2 && (
-                        <span style={{
-                          padding: '4px 10px', background: '#f1f5f9', color: '#64748b',
-                          borderRadius: 16, fontSize: 12, cursor: 'pointer',
-                        }} onClick={() => setShowPayment(true)}>
-                          +{report.missingSecondary.length - 2} 个 · 付费查看 →
-                        </span>
-                      )}
                     </div>
                   </div>
                 )}
@@ -425,113 +482,133 @@ export default function ResumeChecker() {
                     ))}
                   </div>
                 )}
-
-                {isFreeReport && (
-                  <div style={{
-                    textAlign: 'center', padding: '12px', background: 'linear-gradient(135deg, #eff6ff, #f0f9ff)',
-                    borderRadius: 8, cursor: 'pointer', marginTop: 8,
-                  }} onClick={() => setShowPayment(true)}>
-                    <span style={{ fontWeight: 600, color: '#2563eb', fontSize: 13 }}>
-                      🔓 解锁完整报告（¥6.9） — 查看全部关键词 + 格式检查 + AI改写
-                    </span>
-                  </div>
-                )}
               </div>
             )}
           </div>
 
-          {/* Format Section (VIP + Free show basic) */}
+          {/* Format Section（分数免费，明细锁定） */}
           <div className="card" style={{ marginTop: 12 }}>
             <div className="card-title" onClick={() => toggleSection('format')} style={{ cursor: 'pointer' }}>
               {expandedSections.has('format') ? '▼' : '▶'} 📐 格式检查：{report.formatScore}/100
             </div>
             {expandedSections.has('format') && (
               <div style={{ marginTop: 8 }}>
-                {report.formatIssues.map((issue, i) => (
-                  <div key={i} style={{
-                    padding: '8px 12px', marginBottom: 6, borderRadius: 8,
-                    background: issue.type === 'error' ? '#fef2f2' : issue.type === 'warning' ? '#fffbeb' : '#f0fdf4',
-                    fontSize: 12, lineHeight: 1.5,
-                  }}>
-                    <span style={{
-                      color: issue.type === 'error' ? '#ef4444' : issue.type === 'warning' ? '#f59e0b' : '#16a34a',
-                      fontWeight: 600,
-                    }}>
-                      {issue.type === 'error' ? '❌ ' : issue.type === 'warning' ? '⚠️ ' : '✅ '}
-                      {issue.item}：
-                    </span>
-                    {issue.detail}
-                  </div>
-                ))}
+                <LockedSection
+                  locked={!vip}
+                  hint={`🔓 解锁查看 ${report.formatIssues.filter(i => i.type !== 'ok').length + report.structureIssues.length} 条格式诊断 · ¥6.9`}
+                  onUnlock={() => setShowPayment(true)}
+                >
+                  <div>
+                    {report.formatIssues.map((issue, i) => (
+                      <div key={i} style={{
+                        padding: '8px 12px', marginBottom: 6, borderRadius: 8,
+                        background: issue.type === 'error' ? '#fef2f2' : issue.type === 'warning' ? '#fffbeb' : '#f0fdf4',
+                        fontSize: 12, lineHeight: 1.5,
+                      }}>
+                        <span style={{
+                          color: issue.type === 'error' ? '#ef4444' : issue.type === 'warning' ? '#f59e0b' : '#16a34a',
+                          fontWeight: 600,
+                        }}>
+                          {issue.type === 'error' ? '❌ ' : issue.type === 'warning' ? '⚠️ ' : '✅ '}
+                          {issue.item}：
+                        </span>
+                        {issue.detail}
+                      </div>
+                    ))}
 
-                {/* Structure Issues */}
-                {report.structureIssues.map((s, i) => (
-                  <div key={i} style={{
-                    padding: '8px 12px', marginBottom: 6, borderRadius: 8,
-                    background: '#fffbeb', fontSize: 12, lineHeight: 1.5,
-                  }}>
-                    <span style={{ color: '#f59e0b', fontWeight: 600 }}>⚠️ </span>{s}
+                    {/* Structure Issues */}
+                    {report.structureIssues.map((s, i) => (
+                      <div key={i} style={{
+                        padding: '8px 12px', marginBottom: 6, borderRadius: 8,
+                        background: '#fffbeb', fontSize: 12, lineHeight: 1.5,
+                      }}>
+                        <span style={{ color: '#f59e0b', fontWeight: 600 }}>⚠️ </span>{s}
+                      </div>
+                    ))}
                   </div>
-                ))}
-
-                {isFreeReport && report.formatIssues.filter(i => i.type !== 'ok').length > 1 && (
-                  <div style={{
-                    textAlign: 'center', padding: '10px', background: '#eff6ff',
-                    borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#2563eb',
-                  }} onClick={() => setShowPayment(true)}>
-                    🔓 查看完整格式优化方案 →
-                  </div>
-                )}
+                </LockedSection>
               </div>
             )}
           </div>
 
-          {/* ATS Tips */}
+          {/* ATS Tips（锁定） */}
           <div className="card" style={{ marginTop: 12 }}>
             <div className="card-title">💡 ATS 优化建议</div>
             <div style={{ marginTop: 8 }}>
-              {(isFreeReport ? report.atsTips.slice(0, 2) : report.atsTips).map((tip, i) => (
-                <div key={i} style={{ padding: '6px 0', fontSize: 13, color: '#334155', borderBottom: '1px solid #f1f5f9' }}>
-                  {i + 1}. {tip}
+              <LockedSection
+                locked={!vip}
+                hint={`🔓 解锁查看 ${report.atsTips.length} 条优化建议 · ¥6.9`}
+                onUnlock={() => setShowPayment(true)}
+              >
+                <div>
+                  {report.atsTips.map((tip, i) => (
+                    <div key={i} style={{ padding: '6px 0', fontSize: 13, color: '#334155', borderBottom: '1px solid #f1f5f9' }}>
+                      {i + 1}. {tip}
+                    </div>
+                  ))}
                 </div>
-              ))}
-              {isFreeReport && report.atsTips.length > 2 && (
-                <div style={{
-                  textAlign: 'center', padding: '10px', color: '#2563eb', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                }} onClick={() => setShowPayment(true)}>
-                  +{report.atsTips.length - 2} 条建议 · 付费查看 →
-                </div>
-              )}
+              </LockedSection>
             </div>
           </div>
 
-          {/* Improvements */}
-          {!isFreeReport && report.improvedSections.length > 0 && (
+          {/* Improvements（锁定） */}
+          {report.improvedSections.length > 0 && (
             <div className="card" style={{ marginTop: 12 }}>
               <div className="card-title">✏️ 针对性修改建议</div>
               <div style={{ marginTop: 8 }}>
-                {report.improvedSections.map((imp, i) => (
-                  <div key={i} style={{
-                    padding: '10px 12px', marginBottom: 8, background: '#f8fafc', borderRadius: 8,
-                    border: '1px solid #e2e8f0', fontSize: 12, lineHeight: 1.6,
-                  }}>
-                    <div style={{ color: '#64748b', marginBottom: 4 }}>
-                      <strong>原文：</strong><span style={{ textDecoration: 'line-through' }}>{imp.original}</span>
-                    </div>
-                    <div style={{ color: '#16a34a', marginBottom: 4 }}>
-                      <strong>改为：</strong>{imp.improved}
-                    </div>
-                    <div style={{ color: '#64748b', fontSize: 11 }}>
-                      📌 {imp.reason}
-                    </div>
+                <LockedSection
+                  locked={!vip}
+                  hint={`🔓 解锁查看 ${report.improvedSections.length} 条逐句对照 · ¥6.9`}
+                  onUnlock={() => setShowPayment(true)}
+                >
+                  <div>
+                    {report.improvedSections.map((imp, i) => (
+                      <div key={i} style={{
+                        padding: '10px 12px', marginBottom: 8, background: '#f8fafc', borderRadius: 8,
+                        border: '1px solid #e2e8f0', fontSize: 12, lineHeight: 1.6,
+                      }}>
+                        <div style={{ color: '#64748b', marginBottom: 4 }}>
+                          <strong>原文：</strong><span style={{ textDecoration: 'line-through' }}>{imp.original}</span>
+                        </div>
+                        <div style={{ color: '#16a34a', marginBottom: 4 }}>
+                          <strong>改为：</strong>{imp.improved}
+                        </div>
+                        <div style={{ color: '#64748b', fontSize: 11 }}>
+                          📌 {imp.reason}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </LockedSection>
               </div>
             </div>
           )}
 
+          {/* 统一解锁入口（非 VIP 时显示，含「还有 N 项完整诊断」） */}
+          {!vip && lockedCount > 0 && (
+            <div style={{
+              marginTop: 12, padding: '14px 16px', borderRadius: 12,
+              background: 'linear-gradient(135deg, #eff6ff, #f0f9ff)',
+              border: '1px solid #bfdbfe', textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#1e40af', marginBottom: 4 }}>
+                还有 {lockedCount} 项完整诊断未解锁
+              </div>
+              <div style={{ fontSize: 12, color: '#475569', marginBottom: 12, lineHeight: 1.6 }}>
+                全部关键词缺口 + 格式明细 + 逐句对照 + 优化建议
+              </div>
+              <button
+                className="btn-primary"
+                style={{ width: '100%', padding: '13px', fontSize: 15, background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}
+                onClick={() => setShowPayment(true)}
+              >
+                🔓 ¥6.9 解锁完整报告（30 天不限次）
+              </button>
+            </div>
+          )}
+
           {/* AI Polish (VIP only) */}
-          {!isFreeReport && (
+          {vip && (
             <div style={{ marginTop: 12 }}>
               <button
                 className="btn-primary"
@@ -560,22 +637,35 @@ export default function ResumeChecker() {
             </div>
           )}
 
-          {/* Free upgrade button */}
-          {isFreeReport && (
-            <button
-              className="btn-primary"
-              style={{
-                width: '100%', padding: '14px', marginTop: 16,
-                background: 'linear-gradient(135deg, #f59e0b, #ef4444)', fontSize: 15,
-              }}
-              onClick={() => setShowPayment(true)}
-            >
-              🔓 解锁完整报告 · ¥6.9
-            </button>
-          )}
+          {/* 人工精修服务 CTA */}
+          <div style={{
+            marginTop: 16, padding: '16px',
+            background: 'linear-gradient(135deg, #eff6ff, #f0f9ff)',
+            borderRadius: 12, border: '1px solid #bfdbfe',
+          }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#1e40af', marginBottom: 4 }}>
+              ✍️ 想更高过筛率？人工精修简历
+            </div>
+            <div style={{ fontSize: 12, color: '#475569', marginBottom: 12, lineHeight: 1.6 }}>
+              AI 报告免费，人工精修 {SERVICE_PRICE_TEXT}（改到能过筛为止）。工具只查关键词缺口，工科简历的"行话包装 + 量化成果"得人来做。
+            </div>
+            {SERVICE_URL ? (
+              <a href={SERVICE_URL} target="_blank" rel="noopener noreferrer"
+                className="btn-primary" style={{ display: 'block', textAlign: 'center', textDecoration: 'none',
+                  background: 'linear-gradient(135deg, #2563eb, #7c3aed)', fontSize: 15 }}>
+                🛒 去闲鱼下单 · 人工精修 {SERVICE_PRICE_TEXT}
+              </a>
+            ) : (
+              <button className="btn-primary"
+                style={{ width: '100%', background: 'linear-gradient(135deg, #2563eb, #7c3aed)', fontSize: 15 }}
+                onClick={() => setShowService(true)}>
+                🛒 查看人工精修服务 · {SERVICE_PRICE_TEXT}
+              </button>
+            )}
+          </div>
 
-          {/* Copy Report Button */}
-          {!isFreeReport && (
+          {/* Copy Report Button（完整报告，VIP 专属） */}
+          {vip && (
             <button
               className="btn-outline"
               style={{ width: '100%', marginTop: 12, padding: '10px' }}
@@ -590,56 +680,22 @@ export default function ResumeChecker() {
         </div>
       )}
 
-      {/* ====== Payment Modal ====== */}
+      {/* ====== VIP 解锁弹窗（¥6.9 / 30 天） ====== */}
       {showPayment && (
         <div className="modal-overlay" onClick={() => setShowPayment(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
-            <h3 style={{ textAlign: 'center' }}>📋 解锁 ATS 完整报告</h3>
+            <h3 style={{ textAlign: 'center' }}>🔓 解锁完整报告</h3>
             <p style={{ fontSize: 13, color: '#64748b', textAlign: 'center' }}>
-              完整关键词分析 · 格式深度检查 · AI智能改写 · 不限次数
+              全部关键词缺口 · 格式检查明细 · 逐句对照 · 优化建议
             </p>
 
-            <div className="modal-pricing">
-              <div
-                className={`pricing-card recommended`}
-                onClick={() => setSelectedPlan(365)}
-                style={{
-                  cursor: 'pointer',
-                  outline: selectedPlan === 365 ? '3px solid #2563eb' : 'none',
-                  background: selectedPlan === 365 ? '#eff6ff' : undefined,
-                  transition: 'all 0.15s',
-                }}
-              >
-                <div>
-                  <div className="pricing-name">🎓 永久卡 · 最划算</div>
-                  <div style={{ fontSize: 11, color: '#64748b' }}>永久有效 · 无限检测 · AI改写 · 自动更新</div>
-                </div>
-                <div>
-                  <span className="pricing-original">¥49.9</span>
-                  <span className="pricing-price">¥19.9</span>
-                </div>
-              </div>
-              <div
-                className="pricing-card"
-                onClick={() => setSelectedPlan(30)}
-                style={{
-                  cursor: 'pointer',
-                  outline: selectedPlan === 30 ? '3px solid #2563eb' : 'none',
-                  background: selectedPlan === 30 ? '#eff6ff' : undefined,
-                  transition: 'all 0.15s',
-                }}
-              >
-                <div>
-                  <div className="pricing-name">📱 月卡</div>
-                  <div style={{ fontSize: 11, color: '#64748b' }}>30天无限使用</div>
-                </div>
-                <div className="pricing-price">¥6.9</div>
-              </div>
+            <div style={{ textAlign: 'center', fontSize: 13, color: '#64748b', marginBottom: 8 }}>
+              💡 <strong style={{ color: '#2563eb' }}>¥6.9</strong> · 30 天不限次查看完整报告
             </div>
 
             <div className="qr-area" style={{ textAlign: 'center' }}>
               <p style={{ fontSize: 13, fontWeight: 600 }}>
-                💳 扫码付款 · 已选：{selectedPlan === 365 ? '永久卡 ¥19.9' : '月卡 ¥6.9'}
+                💳 扫码付款 · ¥6.9 解锁 30 天
               </p>
               <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 10, flexWrap: 'wrap' }}>
                 <div style={{ textAlign: 'center' }}>
@@ -676,6 +732,31 @@ export default function ResumeChecker() {
             </button>
             <button className="btn-close-modal" onClick={() => setShowPayment(false)} style={{ marginTop: 8 }}>
               稍后再说
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ====== 人工精修弹窗（¥49 起，独立于 VIP） ====== */}
+      {showService && (
+        <div className="modal-overlay" onClick={() => setShowService(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
+            <h3 style={{ textAlign: 'center' }}>✍️ 人工简历精修服务</h3>
+            <p style={{ fontSize: 13, color: '#64748b', textAlign: 'center' }}>
+              工科简历专属 · 关键词包装 + 量化成果 · 交付改后简历
+            </p>
+
+            <div style={{ textAlign: 'center', fontSize: 13, color: '#64748b', margin: '12px 0' }}>
+              💡 价格：<strong style={{ color: '#2563eb' }}>{SERVICE_PRICE_TEXT}</strong>（按简历复杂度，改到能过筛为止）
+            </div>
+
+            <div style={{ padding: '12px 14px', background: '#f8fafc', borderRadius: 10, fontSize: 13, color: '#475569', lineHeight: 1.8 }}>
+              📮 下单方式：<strong>闲鱼搜索「毕过AI」</strong><br />
+              拍下后发我简历 + 目标岗位JD，交稿当天出诊断。
+            </div>
+
+            <button className="btn-close-modal" onClick={() => setShowService(false)} style={{ marginTop: 12 }}>
+              知道了
             </button>
           </div>
         </div>
