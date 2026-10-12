@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { track, countFunnel, clearEvents, PAPER_FUNNEL } from './analytics'
-
+import { isCodeValid, addLocalCodeHash, hashCode, generateVipCode, normalizeCode } from './vip'
 // ====== Types ======
 type TabKey =
   | 'jiangchong' | 'runshe' | 'gaixie' | 'fanyi' | 'kuoxie'
@@ -200,7 +200,6 @@ const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
 const STORAGE_KEY_USAGE = 'biguoai_usage'
 const STORAGE_KEY_BONUS = 'biguoai_bonus'
 const STORAGE_KEY_VIP = 'biguoai_vip'
-const STORAGE_KEY_VIP_CODE = 'biguoai_vipcode'
 const STORAGE_KEY_USER_ID = 'biguoai_uid'
 const STORAGE_KEY_SHARED_COUNT = 'biguoai_shared'
 
@@ -212,8 +211,8 @@ const STORAGE_KEY_DEMO = 'demo_mode_enabled'
 
 const DEFAULT_API_BASE = 'https://api.deepseek.com/v1'
 
-// 默认激活码（你可以随时改这个）
-const DEFAULT_VIP_CODE = 'biguo2026'
+// 论文助手付费解锁 = 365 天（与简历体检的 30 天不同，各自独立）
+const VIP_DAYS = 365
 
 // Demo data
 const DEMO_INPUT = '随着互联网技术的快速发展，人工智能在教育领域中的应用越来越广泛。通过对学习数据的分析，人工智能能够为学生提供更加个性化的学习建议，从而提高学习效率和教学质量。'
@@ -279,14 +278,6 @@ function saveVip(days: number) {
   localStorage.setItem(STORAGE_KEY_VIP, JSON.stringify({ expires: Date.now() + days * 86400000 }))
 }
 
-function getCurrentVipCode(): string {
-  return localStorage.getItem(STORAGE_KEY_VIP_CODE) || DEFAULT_VIP_CODE
-}
-
-function setCurrentVipCode(code: string) {
-  localStorage.setItem(STORAGE_KEY_VIP_CODE, code)
-}
-
 function getUserShareId(): string {
   let id = localStorage.getItem(STORAGE_KEY_USER_ID)
   if (!id) {
@@ -326,12 +317,14 @@ export default function App() {
   const [, forceUpdate] = useState(0)
   const [vip, setVip] = useState(isVip())
   const [verifyCode, setVerifyCode] = useState('')
+  const [verifying, setVerifying] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const outputRef = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [showAdmin, setShowAdmin] = useState(false)
-  const [adminCode, setAdminCode] = useState(getCurrentVipCode())
+  const [adminCode, setAdminCode] = useState('')
+  const [adminHash, setAdminHash] = useState('')
   const [showShareModal, setShowShareModal] = useState(false)
   const [shareCopied, setShareCopied] = useState(false)
   const logoClicks = useRef(0)
@@ -573,11 +566,27 @@ export default function App() {
   // On mount: check URL params and show first-time guide
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
+
+    // 卖家的「点开即解锁」链接：?vip=<真实激活码>
+    // 会真正校验；校验通过才发会员，杜绝了旧版「任意内容都注册成有效码」的后门
     const codeFromUrl = params.get('vip')
-    if (codeFromUrl && codeFromUrl.length >= 4) {
-      setCurrentVipCode(codeFromUrl)
-      showToast('欢迎使用毕过AI！每天免费5次 🎉', 'success')
+    if (codeFromUrl && codeFromUrl.length >= 8) {
+      void (async () => {
+        const okCode = await isCodeValid(codeFromUrl)
+        if (okCode) {
+          saveVip(VIP_DAYS)
+          setVip(true)
+          refreshUsage()
+          track('paper_verify_ok', { days: VIP_DAYS, via: 'url_link' })
+          showToast('🎉 激活成功！已解锁无限次', 'success')
+        } else {
+          showToast('激活链接无效或已过期，请联系卖家', 'error')
+        }
+        // 清掉地址栏里的码，避免被顺手分享出去
+        try { window.history.replaceState({}, '', window.location.pathname + window.location.hash) } catch { /* ignore */ }
+      })()
     }
+
     // Referral tracking
     const ref = params.get('ref')
     if (ref && ref.length >= 4) {
@@ -1111,8 +1120,8 @@ export default function App() {
             <h3>📋 人工论文审查服务</h3>
             <p>工科论文格式 + 盲审要点 + 参考文献规范，人工 + AI 审查，交付报告</p>
             <div style={{ fontSize: 13, padding: '10px 14px', borderRadius: 8, marginBottom: 16, lineHeight: 1.6, color: '#64748b' }}>
-              ✅ 这是<strong>一次性支持</strong>，付款后输入交易单号<strong>后 6 位</strong>标记已购<br />
-              ✅ 不付款也能用全部基础功能，支持一下更好 🫶
+              ✅ 付款后把<strong>激活码</strong>发你，粘贴到下方即可解锁无限次<br />
+              ✅ 不付款也能用基础功能（每天 5 次），支持一下更好 🫶
             </div>
 
             <div className="qr-area">
@@ -1142,29 +1151,41 @@ export default function App() {
             <div style={{ marginTop: 16 }}>
               <input
                 className="verify-input"
-                placeholder="输入交易单号后 6 位"
+                placeholder="输入激活码（付款后由卖家提供）"
                 value={verifyCode}
                 onChange={e => setVerifyCode(e.target.value)}
-                maxLength={6}
+                maxLength={20}
               />
               <button
                 className="btn-primary"
                 style={{ background: 'linear-gradient(135deg, #f59e0b, #ef4444)' }}
+                disabled={verifying}
                 onClick={() => {
-                  if (verifyCode.trim().length >= 6) {
-                    setVip(true)
-                    saveVip(365)
-                    setVerifyCode('')
-                    setShowPayment(false)
-                    track('paper_verify_ok', { days: 365 })
-                    showToast('🎉 激活成功！现在可以无限使用了', 'success')
-                    refreshUsage()
-                  } else {
-                    showToast('请输入交易单号后 6 位', 'warning')
+                  const code = verifyCode.trim()
+                  if (code.length < 8) {
+                    showToast('激活码格式不对，请检查是否复制完整', 'warning')
+                    return
                   }
+                  setVerifying(true)
+                  void (async () => {
+                    const okCode = await isCodeValid(code)
+                    setVerifying(false)
+                    if (okCode) {
+                      setVip(true)
+                      saveVip(365)
+                      setVerifyCode('')
+                      setShowPayment(false)
+                      track('paper_verify_ok', { days: 365 })
+                      showToast('🎉 激活成功！现在可以无限使用了', 'success')
+                      refreshUsage()
+                    } else {
+                      track('paper_verify_fail')
+                      showToast('激活码无效，请确认后重试或联系卖家', 'error')
+                    }
+                  })()
                 }}
               >
-                🔓 激活
+                {verifying ? '校验中…' : '🔓 激活'}
               </button>
             </div>
             <button className="btn-close-modal" onClick={() => setShowPayment(false)}>
@@ -1335,33 +1356,50 @@ export default function App() {
         <div className="modal-overlay" onClick={() => setShowAdmin(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <h3>🔐 管理员后台</h3>
-            <p>配置激活码。有人付款后，给他这个码让他激活。</p>
+            <p>生成激活码发给买家。源码只存哈希，明文不落库。</p>
 
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 13, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 6 }}>
-                当前激活码
+                新激活码（点「随机生成」）
               </label>
               <input
                 className="settings-input"
                 value={adminCode}
                 onChange={e => setAdminCode(e.target.value)}
-                placeholder="输入新的激活码"
-                style={{ fontFamily: 'monospace', fontSize: 18, textAlign: 'center' }}
+                placeholder="点右侧「随机生成」"
+                style={{ fontFamily: 'monospace', fontSize: 16, textAlign: 'center' }}
               />
               {adminCode && (
-                <div style={{ marginTop: 8, padding: '8px 10px', background: '#f0fdf4', borderRadius: 8, fontSize: 12, color: '#166534', wordBreak: 'break-all' }}>
-                  <strong>分享链接（发给付款的人）：</strong><br />
-                  <span style={{ fontSize: 11, userSelect: 'all' }}>{window.location.origin + window.location.pathname}?vip={adminCode}</span>
-                  <button
-                    style={{ marginLeft: 8, background: 'none', border: '1px solid #166534', borderRadius: 4, padding: '2px 8px', fontSize: 11, color: '#166534', cursor: 'pointer' }}
-                    onClick={() => {
-                      navigator.clipboard.writeText(window.location.origin + window.location.pathname + '?vip=' + adminCode)
-                      showToast('链接已复制！', 'success')
-                    }}
-                  >
-                    📋 复制
-                  </button>
-                </div>
+                <>
+                  <div style={{ marginTop: 8, padding: '8px 10px', background: '#f0fdf4', borderRadius: 8, fontSize: 12, color: '#166534', wordBreak: 'break-all' }}>
+                    <strong>分享链接（点开即解锁）：</strong><br />
+                    <span style={{ fontSize: 11, userSelect: 'all' }}>{window.location.origin + window.location.pathname}?vip={normalizeCode(adminCode)}</span>
+                    <button
+                      style={{ marginLeft: 8, background: 'none', border: '1px solid #166534', borderRadius: 4, padding: '2px 8px', fontSize: 11, color: '#166534', cursor: 'pointer' }}
+                      onClick={() => {
+                        navigator.clipboard.writeText(window.location.origin + window.location.pathname + '?vip=' + normalizeCode(adminCode))
+                        showToast('链接已复制！', 'success')
+                      }}
+                    >
+                      📋 复制链接
+                    </button>
+                    <button
+                      style={{ marginLeft: 6, background: 'none', border: '1px solid #166534', borderRadius: 4, padding: '2px 8px', fontSize: 11, color: '#166534', cursor: 'pointer' }}
+                      onClick={() => {
+                        navigator.clipboard.writeText(normalizeCode(adminCode))
+                        showToast('激活码已复制！', 'success')
+                      }}
+                    >
+                      📋 复制码
+                    </button>
+                  </div>
+                  <div style={{ marginTop: 6, fontSize: 11, color: '#94a3b8', lineHeight: 1.6 }}>
+                    本机已生效。要让<strong>所有访客</strong>都能用这个码，把下面这行哈希加进 <code>src/vip.ts</code> 的 <code>VIP_CODE_HASHES</code> 后重新部署：
+                  </div>
+                  <div style={{ marginTop: 4, padding: '6px 8px', background: '#f1f5f9', borderRadius: 6, fontSize: 10.5, fontFamily: 'monospace', wordBreak: 'break-all', color: '#475569', userSelect: 'all' }}>
+                    '{adminHash}',
+                  </div>
+                </>
               )}
             </div>
 
@@ -1370,8 +1408,9 @@ export default function App() {
                 className="btn-primary"
                 style={{ flex: 1 }}
                 onClick={() => {
-                  const newCode = 'BIGUO-' + Math.random().toString(36).toUpperCase().slice(2, 8)
-                  setAdminCode(newCode)
+                  const c = generateVipCode()
+                  setAdminCode(c)
+                  void hashCode(c).then(h => setAdminHash(h || ''))
                 }}
               >
                 🎲 随机生成
@@ -1379,20 +1418,22 @@ export default function App() {
               <button
                 className="btn-primary"
                 style={{ flex: 1, background: 'linear-gradient(135deg, var(--success), #059669)' }}
+                disabled={!adminHash}
                 onClick={() => {
-                  if (adminCode.length < 4) { showToast('激活码至少4位', 'warning'); return }
-                  setCurrentVipCode(adminCode)
-                  setShowAdmin(false)
-                  showToast(`激活码已更新: ${adminCode}`, 'success')
+                  if (!adminHash) { showToast('请先生成激活码', 'warning'); return }
+                  addLocalCodeHash(adminHash)
+                  track('admin_code_saved')
+                  showToast('已在本机生效！记得把哈希加进 src/vip.ts', 'success')
                 }}
               >
-                💾 保存
+                ✅ 本机启用
               </button>
             </div>
 
-            <div style={{ marginTop: 16, padding: '10px 14px', background: '#fef3c7', borderRadius: 8, fontSize: 12, color: '#92400e', lineHeight: 1.5 }}>
-              <strong>⚠️ 每次有人激活后请更换新码</strong><br />
-              操作：点「随机生成」→「保存」→ 把新码发给付款的人
+            <div style={{ marginTop: 16, padding: '10px 14px', background: '#fef3c7', borderRadius: 8, fontSize: 12, color: '#92400e', lineHeight: 1.6 }}>
+              <strong>⚠️ 每次卖出后建议换码</strong><br />
+              流程：随机生成 → 复制链接发买家 → 把哈希写进 <code>src/vip.ts</code> → 推送部署<br />
+              <span style={{ color: '#a16207' }}>纯前端无法防住会改 localStorage 的人；要真防破解需上后端校验接口。</span>
             </div>
 
             {/* 转化漏斗（本机数据，仅作趋势参考） */}

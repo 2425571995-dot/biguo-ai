@@ -1,6 +1,7 @@
 import { useState, useCallback, type ReactNode } from 'react'
 import { analyzeResume, buildResumePolishPrompt, detectJobCategory, type ATSReport } from './atsEngine'
 import { track } from './analytics'
+import { isCodeValid, issueMemberCode, getIssuedMemberCodes, normalizeCode } from './vip'
 
 // ====== Config ======
 // 从 localStorage 读取用户配置的 API（与论文助手共享配置）
@@ -116,6 +117,7 @@ export default function ResumeChecker() {
   const [showPayment, setShowPayment] = useState(false)
   const [showService, setShowService] = useState(false)
   const [verifyCode, setVerifyCode] = useState('')
+  const [verifying, setVerifying] = useState(false)
   const [vip, setVip] = useState(isVip())
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['keywords', 'format']))
 
@@ -203,63 +205,81 @@ export default function ResumeChecker() {
     }
   }, [report, resumeText, vip])
 
-  // VIP 验证
+  // VIP 验证（真校验：源码只存激活码哈希，输任意数字不再放行）
   const handleVerify = () => {
     const code = verifyCode.trim()
-    if (code.length < 4) {
+    if (code.length < 8) {
       const el = document.createElement('div')
-      el.textContent = '请先输入交易单号后6位'
+      el.textContent = '激活码格式不对，请检查是否复制完整'
       el.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1e293b;color:#fff;padding:12px 24px;border-radius:24px;font-size:14px;z-index:9999;pointer-events:none;'
       document.body.appendChild(el)
       setTimeout(() => el.remove(), 2000)
       return
     }
 
-    // 如果是会员码（BG开头），走恢复流程
-    if (code.startsWith('BG') && code.length >= 8) {
-      localStorage.setItem(STORAGE_KEY_RESUME_VIP, JSON.stringify({
-        expires: Date.now() + VIP_DAYS * 86400000,
-        memberCode: code,
-      }))
+    setVerifying(true)
+    void (async () => {
+      const okCode = await isCodeValid(code)
+      setVerifying(false)
+
+      // 会员码恢复：仅接受本机此前由有效激活码签发过的会员码
+      const isIssuedMemberCode = code.startsWith('BG') && getIssuedMemberCodes().includes(code.toUpperCase())
+      if (!okCode && !isIssuedMemberCode) {
+        track('resume_verify_fail')
+        const el = document.createElement('div')
+        el.textContent = '激活码无效，请确认后重试或联系卖家'
+        el.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1e293b;color:#fff;padding:12px 24px;border-radius:24px;font-size:14px;z-index:9999;pointer-events:none;'
+        document.body.appendChild(el)
+        setTimeout(() => el.remove(), 2200)
+        return
+      }
+
+      if (isIssuedMemberCode) {
+        localStorage.setItem(STORAGE_KEY_RESUME_VIP, JSON.stringify({
+          expires: Date.now() + VIP_DAYS * 86400000,
+          memberCode: code,
+        }))
+        setVip(true)
+        setVerifyCode('')
+        setShowPayment(false)
+        track('resume_verify_ok', { mode: 'member_code_restore' })
+        const el2 = document.createElement('div')
+        el2.innerHTML = `<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;">
+          <div style="background:#fff;border-radius:16px;padding:24px;max-width:340px;text-align:center;margin:16px;">
+            <div style="font-size:40px;margin-bottom:8px;">🎉</div>
+            <div style="font-size:16px;font-weight:700;margin-bottom:4px;">会员已恢复！</div>
+            <div style="font-size:13px;color:#64748b;margin-bottom:12px;">有效期至 ${new Date(Date.now() + VIP_DAYS * 86400000).toLocaleDateString()}</div>
+            <button style="width:100%;padding:12px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;" onclick="this.closest('[style*=\"fixed\"]').remove()">开始使用</button>
+          </div>
+        </div>`
+        document.body.appendChild(el2)
+        return
+      }
+
+      // 用有效激活码解锁：签发一个会员码，便于本机后续恢复
+      const memberCode = 'BG' + simpleHash(normalizeCode(code)).toUpperCase().slice(0, 10)
+      issueMemberCode(memberCode)
+      const expires = Date.now() + VIP_DAYS * 86400000
+
+      localStorage.setItem(STORAGE_KEY_RESUME_VIP, JSON.stringify({ expires, memberCode }))
       setVip(true)
       setVerifyCode('')
       setShowPayment(false)
-      track('resume_verify_ok', { mode: 'member_code_restore' })
-      const el2 = document.createElement('div')
-      el2.innerHTML = `<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;">
+      track('resume_verify_ok', { mode: 'new_unlock', days: VIP_DAYS })
+
+      // 弹窗提示保存会员码
+      const el = document.createElement('div')
+      el.innerHTML = `<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;">
         <div style="background:#fff;border-radius:16px;padding:24px;max-width:340px;text-align:center;margin:16px;">
-          <div style="font-size:40px;margin-bottom:8px;">🎉</div>
-          <div style="font-size:16px;font-weight:700;margin-bottom:4px;">会员已恢复！</div>
-          <div style="font-size:13px;color:#64748b;margin-bottom:12px;">有效期至 ${new Date(Date.now() + VIP_DAYS * 86400000).toLocaleDateString()}</div>
-          <button style="width:100%;padding:12px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;" onclick="this.closest('[style*=\"fixed\"]').remove()">开始使用</button>
+          <div style="font-size:40px;margin-bottom:8px;">🔑</div>
+          <div style="font-size:16px;font-weight:700;margin-bottom:8px;">已解锁 · 请保存会员码</div>
+          <div style="font-size:22px;font-weight:800;letter-spacing:2px;color:#2563eb;background:#eff6ff;padding:12px;border-radius:12px;margin-bottom:8px;font-family:monospace;" id="memberCodeDisplay">${memberCode}</div>
+          <div style="font-size:12px;color:#64748b;margin-bottom:16px;line-height:1.5;">换设备/清缓存后，在解锁框里输入此会员码即可恢复。建议截图保存！</div>
+          <button style="width:100%;padding:12px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;" onclick="this.closest('[style*=\"fixed\"]').remove()">✅ 已截图保存</button>
         </div>
       </div>`
-      document.body.appendChild(el2)
-      return
-    }
-
-    // 从输入码派生出会员码（取后8位+固定盐做简单hash）
-    const memberCode = 'BG' + simpleHash(code).toUpperCase().slice(0, 10)
-    const expires = Date.now() + VIP_DAYS * 86400000
-
-    localStorage.setItem(STORAGE_KEY_RESUME_VIP, JSON.stringify({ expires, memberCode }))
-    setVip(true)
-    setVerifyCode('')
-    setShowPayment(false)
-    track('resume_verify_ok', { mode: 'new_unlock', days: VIP_DAYS })
-
-    // 弹窗提示保存会员码
-    const el = document.createElement('div')
-    el.innerHTML = `<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;">
-      <div style="background:#fff;border-radius:16px;padding:24px;max-width:340px;text-align:center;margin:16px;">
-        <div style="font-size:40px;margin-bottom:8px;">🔑</div>
-        <div style="font-size:16px;font-weight:700;margin-bottom:8px;">已解锁 · 请保存会员码</div>
-        <div style="font-size:22px;font-weight:800;letter-spacing:2px;color:#2563eb;background:#eff6ff;padding:12px;border-radius:12px;margin-bottom:8px;font-family:monospace;" id="memberCodeDisplay">${memberCode}</div>
-        <div style="font-size:12px;color:#64748b;margin-bottom:16px;line-height:1.5;">换设备/清缓存后，在解锁框里输入此会员码即可恢复。建议截图保存！</div>
-        <button style="width:100%;padding:12px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;" onclick="this.closest('[style*=\"fixed\"]').remove()">✅ 已截图保存</button>
-      </div>
-    </div>`
-    document.body.appendChild(el)
+      document.body.appendChild(el)
+    })()
   }
 
   // 简单哈希函数
@@ -724,22 +744,24 @@ export default function ResumeChecker() {
                   <div style={{ fontSize: 12, color: '#334155', marginTop: 6, fontWeight: 500 }}>微信扫码</div>
                 </div>
               </div>
-              <div style={{ fontSize: 12, color: '#64748b', marginTop: 10 }}>付款完成后，将交易单号后6位填入下方</div>
+              <div style={{ fontSize: 12, color: '#64748b', marginTop: 10 }}>付款后把激活码发你，粘贴到下方即可解锁</div>
             </div>
 
             <input
               className="verify-input"
-              placeholder="新用户输交易单号后6位 · 老用户输会员码恢复"
+              placeholder="输入激活码（付款后由卖家提供）"
               value={verifyCode}
               onChange={e => setVerifyCode(e.target.value)}
+              maxLength={20}
               style={{ marginTop: 10, fontSize: 15, textAlign: 'center', letterSpacing: 2 }}
             />
             <button
               className="btn-primary"
               style={{ width: '100%', marginTop: 10, background: 'linear-gradient(135deg, #2563eb, #7c3aed)', padding: '14px', fontSize: 16 }}
               onClick={handleVerify}
+              disabled={verifying}
             >
-              🔓 解锁完整报告
+              {verifying ? '校验中…' : '🔓 解锁完整报告'}
             </button>
             <button className="btn-close-modal" onClick={() => setShowPayment(false)} style={{ marginTop: 8 }}>
               稍后再说
