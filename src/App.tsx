@@ -454,7 +454,7 @@ export default function App() {
         setOutput(DEMO_OUTPUT)
         setModifyNote(DEMO_NOTE)
       } else {
-        setOutput('这是 Demo 模式示例结果。配置诗云 API Key 后，即可处理你输入的真实论文内容。\n\n' + DEMO_OUTPUT)
+        setOutput('这是 Demo 模式示例结果。配置 DeepSeek API Key 后，即可处理你输入的真实论文内容。\n\n' + DEMO_OUTPUT)
         setModifyNote(DEMO_NOTE)
       }
       if (!vip) {
@@ -907,7 +907,7 @@ export default function App() {
         {/* API Key Prompt (inline warning) */}
         {showApiKeyPrompt && (
           <div className="api-key-prompt">
-            <p>🔑 需要一个 API Key 才能使用。免费注册诗云，1 分钟搞定！</p>
+            <p>🔑 需要一个 API Key 才能使用。DeepSeek 官网注册，1 分钟搞定！</p>
             <div className="api-key-prompt-buttons">
               <button onClick={() => { setShowApiKeyPrompt(false); openConfig('firstTime') }}>
                 🚀 免费配置 Key（1 分钟）
@@ -1179,8 +1179,8 @@ export default function App() {
                   <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: 10 }}>
                     <span style={{ width: 24, height: 24, borderRadius: 12, background: '#2563eb', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>1</span>
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>注册获取免费 Key</div>
-                      <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>点击下方按钮，1 分钟注册即送免费额度</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>注册并创建 Key</div>
+                      <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>点击下方按钮，手机号注册，充几块能用很久</div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
@@ -1207,7 +1207,7 @@ export default function App() {
               {configMode === 'firstTime' ? (
                 <div className="config-hint">✅ 已默认填好，无需修改</div>
               ) : (
-                <div className="config-hint">默认使用诗云 API 地址，一般无需修改</div>
+                <div className="config-hint">✅ DeepSeek 官方地址，无需修改</div>
               )}
             </div>
 
@@ -1219,7 +1219,7 @@ export default function App() {
                   type={configShowPwd ? 'text' : 'password'}
                   value={configApiKey}
                   onChange={e => setConfigApiKey(e.target.value)}
-                  placeholder={configMode === 'firstTime' ? '从诗云复制 Key 粘贴到这里' : '粘贴你的诗云 API Key'}
+                  placeholder={configMode === 'firstTime' ? '在 DeepSeek 官网创建 Key 后粘贴到这里' : '粘贴你的 DeepSeek API Key'}
                 />
                 <button
                   type="button"
@@ -1231,7 +1231,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* 诗云 Link */}
+            {/* DeepSeek Link */}
             <a
               href="https://platform.deepseek.com"
               target="_blank"
@@ -1239,7 +1239,7 @@ export default function App() {
               className="config-link-btn"
               style={configMode === 'firstTime' ? { padding: '12px 20px', fontSize: 14, fontWeight: 600 } : {}}
             >
-              🔑 去诗云免费获取 Key
+              🔑 去 DeepSeek 官网注册并获取 Key
             </a>
 
             {/* First-time: Demo fallback */}
