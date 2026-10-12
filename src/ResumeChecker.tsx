@@ -1,5 +1,6 @@
 import { useState, useCallback, type ReactNode } from 'react'
 import { analyzeResume, buildResumePolishPrompt, detectJobCategory, type ATSReport } from './atsEngine'
+import { track } from './analytics'
 
 // ====== Config ======
 // 从 localStorage 读取用户配置的 API（与论文助手共享配置）
@@ -142,6 +143,13 @@ export default function ResumeChecker() {
       + report.improvedSections.length
     : 0
 
+  // 打开付费弹窗（统一入口，带埋点）
+  const openPay = useCallback((from: string) => {
+    track('resume_unlock_click', { from })
+    track('resume_pay_modal', { from })
+    setShowPayment(true)
+  }, [])
+
   // 分析简历（引擎纯本地零成本，不设次数限制）
   const handleAnalyze = useCallback(() => {
     if (!resumeText.trim() || !jdText.trim()) return
@@ -156,6 +164,7 @@ export default function ResumeChecker() {
       const result = analyzeResume(resumeText, jdText, cat)
       setReport(result)
       setLoading(false)
+      track('resume_analyze', { category: cat || 'auto', score: result.totalScore })
     }, 100)
   }, [resumeText, jdText, jobCategory])
 
@@ -163,7 +172,7 @@ export default function ResumeChecker() {
   const handlePolish = useCallback(async () => {
     if (!report || report.missingCore.length === 0) return
     if (!vip) {
-      setShowPayment(true)
+      openPay('ai_polish')
       return
     }
 
@@ -215,6 +224,7 @@ export default function ResumeChecker() {
       setVip(true)
       setVerifyCode('')
       setShowPayment(false)
+      track('resume_verify_ok', { mode: 'member_code_restore' })
       const el2 = document.createElement('div')
       el2.innerHTML = `<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:10000;display:flex;align-items:center;justify-content:center;">
         <div style="background:#fff;border-radius:16px;padding:24px;max-width:340px;text-align:center;margin:16px;">
@@ -236,6 +246,7 @@ export default function ResumeChecker() {
     setVip(true)
     setVerifyCode('')
     setShowPayment(false)
+    track('resume_verify_ok', { mode: 'new_unlock', days: VIP_DAYS })
 
     // 弹窗提示保存会员码
     const el = document.createElement('div')
@@ -429,7 +440,7 @@ export default function ResumeChecker() {
                     <LockedSection
                       locked
                       hint={`🔓 还有 ${lockedMissing.length} 个关键词缺口 · ¥6.9 解锁`}
-                      onUnlock={() => setShowPayment(true)}
+                      onUnlock={() => openPay('locked_section')}
                     >
                       <div style={{ padding: '4px 0' }}>
                         <div style={{ marginBottom: 10 }}>
@@ -496,7 +507,7 @@ export default function ResumeChecker() {
                 <LockedSection
                   locked={!vip}
                   hint={`🔓 解锁查看 ${report.formatIssues.filter(i => i.type !== 'ok').length + report.structureIssues.length} 条格式诊断 · ¥6.9`}
-                  onUnlock={() => setShowPayment(true)}
+                  onUnlock={() => openPay('locked_section')}
                 >
                   <div>
                     {report.formatIssues.map((issue, i) => (
@@ -538,7 +549,7 @@ export default function ResumeChecker() {
               <LockedSection
                 locked={!vip}
                 hint={`🔓 解锁查看 ${report.atsTips.length} 条优化建议 · ¥6.9`}
-                onUnlock={() => setShowPayment(true)}
+                onUnlock={() => openPay('locked_section')}
               >
                 <div>
                   {report.atsTips.map((tip, i) => (
@@ -559,7 +570,7 @@ export default function ResumeChecker() {
                 <LockedSection
                   locked={!vip}
                   hint={`🔓 解锁查看 ${report.improvedSections.length} 条逐句对照 · ¥6.9`}
-                  onUnlock={() => setShowPayment(true)}
+                  onUnlock={() => openPay('locked_section')}
                 >
                   <div>
                     {report.improvedSections.map((imp, i) => (
@@ -600,7 +611,7 @@ export default function ResumeChecker() {
               <button
                 className="btn-primary"
                 style={{ width: '100%', padding: '13px', fontSize: 15, background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}
-                onClick={() => setShowPayment(true)}
+                onClick={() => openPay('unlock_banner')}
               >
                 🔓 ¥6.9 解锁完整报告（30 天不限次）
               </button>
@@ -658,7 +669,7 @@ export default function ResumeChecker() {
             ) : (
               <button className="btn-primary"
                 style={{ width: '100%', background: 'linear-gradient(135deg, #2563eb, #7c3aed)', fontSize: 15 }}
-                onClick={() => setShowService(true)}>
+                onClick={() => { track('resume_service_click'); setShowService(true) }}>
                 🛒 查看人工精修服务 · {SERVICE_PRICE_TEXT}
               </button>
             )}

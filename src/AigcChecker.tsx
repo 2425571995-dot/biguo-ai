@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
+import { track } from './analytics'
 
 // ====== AIGC 痕迹检测引擎（纯本地，不上传） ======
 interface PatternDef {
@@ -149,8 +150,9 @@ export default function AigcChecker() {
       return
     }
     setResult(r)
+    track('aigc_analyze', { score: r.score, band: r.band, chars: charCount, hits: r.hitCount })
     setTimeout(() => document.getElementById('aigc-result')?.scrollIntoView({ behavior: 'smooth' }), 100)
-  }, [input])
+  }, [input, charCount])
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(report).then(() => {
@@ -269,7 +271,7 @@ export default function AigcChecker() {
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>修订模式留痕 + 前后对比报告，改到安全线为止</div>
               </div>
               <button
-                onClick={() => setShowService(!showService)}
+                onClick={() => { const next = !showService; setShowService(next); track('aigc_service_toggle', { open: next }) }}
                 style={{ background: '#fff', color: '#1e40af', fontSize: 12, border: 'none', padding: '8px 14px', borderRadius: 20, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' }}
               >
                 🛒 查看人工服务

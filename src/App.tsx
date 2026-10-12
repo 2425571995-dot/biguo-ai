@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { track, countFunnel, clearEvents, PAPER_FUNNEL } from './analytics'
 
 // ====== Types ======
 type TabKey =
@@ -443,6 +444,7 @@ export default function App() {
     if (!vip) {
       const used = getUsage()
       if (used >= getTotalDailyLimit()) {
+        track('paper_pay_modal', { from: 'quota_exhausted' })
         setShowPayment(true)
         return
       }
@@ -532,6 +534,7 @@ export default function App() {
 
       setOutput(result)
       setModifyNote('已优化句式结构、替换重复表达，并尽量保留原文含义。')
+      track('paper_analyze', { tab, mode: 'live' })
 
       if (!vip) {
         incrementUsage()
@@ -540,6 +543,7 @@ export default function App() {
 
       showToast('处理完成！ 🎉', 'success')
     } catch (err: any) {
+      track('paper_analyze_error', { tab, msg: String(err?.message || '').slice(0, 80) })
       showToast('处理失败，请检查 API Key 是否正确，或稍后重试。', 'error')
     } finally {
       setLoading(false)
@@ -993,7 +997,7 @@ export default function App() {
           >
             🎁 分享得 +3 次
           </button>
-            <button className="btn-upgrade" onClick={() => setShowPayment(true)}>
+            <button className="btn-upgrade" onClick={() => { track('paper_pay_modal', { from: 'upgrade_btn' }); setShowPayment(true) }}>
               ⭐ 人工论文审查 ¥49
             </button>
         </div>
@@ -1002,6 +1006,11 @@ export default function App() {
       {/* ===== Footer ===== */}
       <div className="footer">
         <p>📖 毕过AI · 专注毕业论文优化表达、润色与提交前规范检查</p>
+        <p style={{ marginTop: 6, fontSize: 12 }}>
+          <a href="#resume" style={{ color: '#2563eb', textDecoration: 'none', marginRight: 12 }}>📋 简历体检</a>
+          <a href="#aigc" style={{ color: '#dc2626', textDecoration: 'none', marginRight: 12 }}>🔬 AIGC自查</a>
+          <a href="/landing.html" style={{ color: '#475569', textDecoration: 'none' }}>💳 服务与价格</a>
+        </p>
         <p style={{ marginTop: 4, color: '#94a3b8' }}>访客 <span id="busuanzi_value_site_pv"></span> 次 ｜ 已服务 <span id="busuanzi_value_page_pv"></span> 篇论文</p>
       </div>
 
@@ -1147,6 +1156,7 @@ export default function App() {
                     saveVip(365)
                     setVerifyCode('')
                     setShowPayment(false)
+                    track('paper_verify_ok', { days: 365 })
                     showToast('🎉 激活成功！现在可以无限使用了', 'success')
                     refreshUsage()
                   } else {
@@ -1383,6 +1393,41 @@ export default function App() {
             <div style={{ marginTop: 16, padding: '10px 14px', background: '#fef3c7', borderRadius: 8, fontSize: 12, color: '#92400e', lineHeight: 1.5 }}>
               <strong>⚠️ 每次有人激活后请更换新码</strong><br />
               操作：点「随机生成」→「保存」→ 把新码发给付款的人
+            </div>
+
+            {/* 转化漏斗（本机数据，仅作趋势参考） */}
+            <div style={{ marginTop: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <strong style={{ fontSize: 13, color: '#334155' }}>📊 本机转化漏斗</strong>
+                <button
+                  style={{ background: 'none', border: '1px solid #cbd5e1', borderRadius: 6, padding: '2px 8px', fontSize: 11, color: '#64748b', cursor: 'pointer' }}
+                  onClick={() => { clearEvents(); showToast('本机埋点数据已清空', 'success'); setAdminCode(adminCode) }}
+                >
+                  清空
+                </button>
+              </div>
+              {(() => {
+                const rows = countFunnel(PAPER_FUNNEL)
+                const top = rows[0]?.count || 0
+                return rows.map((r) => {
+                  const pct = top ? Math.round((r.count / top) * 100) : 0
+                  return (
+                    <div key={r.label} style={{ marginBottom: 6 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, color: '#475569', marginBottom: 2 }}>
+                        <span>{r.label}</span>
+                        <span>{r.count} 次 · {pct}%</span>
+                      </div>
+                      <div style={{ height: 6, background: '#eef2f7', borderRadius: 3, overflow: 'hidden' }}>
+                        <div style={{ width: pct + '%', height: '100%', background: 'linear-gradient(90deg,#2563eb,#7c3aed)' }} />
+                      </div>
+                    </div>
+                  )
+                })
+              })()}
+              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6, lineHeight: 1.5 }}>
+                仅统计<strong>本机浏览器</strong>的事件，用于自查漏斗是否通畅。<br />
+                想看全站真实数据：在 <code>src/analytics.ts</code> 填入百度统计 ID。
+              </div>
             </div>
 
             <button className="btn-close-modal" onClick={() => setShowAdmin(false)}>
