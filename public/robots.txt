@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# 管理/统计类脚本无需抓取
+Disallow: /assets/
+
+Sitemap: https://biguoai.top/sitemap.xml

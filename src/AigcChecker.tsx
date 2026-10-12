@@ -137,6 +137,7 @@ export default function AigcChecker() {
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [copied, setCopied] = useState(false)
   const [showSop, setShowSop] = useState(false)
+  const [showService, setShowService] = useState(false)
 
   const charCount = useMemo(() => input.replace(/\s/g, '').length, [input])
   const report = useMemo(() => (result ? buildReport(result, charCount) : ''), [result, charCount])
@@ -260,15 +261,32 @@ export default function AigcChecker() {
             </div>
           )}
 
-          {/* 转化钩子：人工降AI味 + 简历体检 */}
-          <div style={{ marginTop: 22, background: 'linear-gradient(135deg,#1e40af,#3b82f6)', borderRadius: 12, padding: '14px 18px', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 14 }}>😅 不想自己改？人工降 AI 味服务</div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>修订模式留痕 + 前后对比报告，闲鱼搜「毕过AI」</div>
+          {/* 转化钩子：人工降AI味（主）+ 简历体检（次） */}
+          <div style={{ marginTop: 22, background: 'linear-gradient(135deg,#1e40af,#3b82f6)', borderRadius: 12, padding: '14px 18px', color: '#fff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>😅 不想自己改？人工降 AI 味服务</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>修订模式留痕 + 前后对比报告，改到安全线为止</div>
+              </div>
+              <button
+                onClick={() => setShowService(!showService)}
+                style={{ background: '#fff', color: '#1e40af', fontSize: 12, border: 'none', padding: '8px 14px', borderRadius: 20, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit' }}
+              >
+                🛒 查看人工服务
+              </button>
             </div>
-            <a href="#resume" style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', fontSize: 12, textDecoration: 'none', padding: '8px 14px', borderRadius: 20, fontWeight: 500, whiteSpace: 'nowrap' }}>
-              📋 顺手测测简历 →
-            </a>
+            {showService && (
+              <div style={{ marginTop: 12, padding: '12px 14px', background: 'rgba(255,255,255,0.12)', borderRadius: 10, fontSize: 12.5, lineHeight: 1.9 }}>
+                📮 下单方式：<b>闲鱼搜索「毕过AI」</b><br />
+                拍下后发我论文全文，交付：修订模式留痕全文 + 前后 AIGC 风险分对比截图 + 一页修改清单。<br />
+                <span style={{ color: 'rgba(255,255,255,0.7)' }}>只做改写与自查辅导，不含代写；学校检测结果以官方为准。</span>
+              </div>
+            )}
+            <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.15)', fontSize: 12 }}>
+              <a href="#resume" style={{ color: 'rgba(255,255,255,0.9)', textDecoration: 'none', fontWeight: 500 }}>
+                📋 顺手测测简历能过 AI 筛选吗 →
+              </a>
+            </div>
           </div>
         </div>
       )}

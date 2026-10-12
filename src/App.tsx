@@ -668,7 +668,7 @@ export default function App() {
                 🔥 新上线
               </span>
               <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>
-                2026届毕业生都在用
+                2027届毕业生都在用
               </span>
             </div>
 
@@ -1102,7 +1102,7 @@ export default function App() {
             <h3>📋 人工论文审查服务</h3>
             <p>工科论文格式 + 盲审要点 + 参考文献规范，人工 + AI 审查，交付报告</p>
             <div style={{ fontSize: 13, padding: '10px 14px', borderRadius: 8, marginBottom: 16, lineHeight: 1.6, color: '#64748b' }}>
-              ✅ 这是<strong>一次性支持</strong>，付款后输入 6 位交易单号后 4 位标记已购<br />
+              ✅ 这是<strong>一次性支持</strong>，付款后输入交易单号<strong>后 6 位</strong>标记已购<br />
               ✅ 不付款也能用全部基础功能，支持一下更好 🫶
             </div>
 
@@ -1133,7 +1133,7 @@ export default function App() {
             <div style={{ marginTop: 16 }}>
               <input
                 className="verify-input"
-                placeholder="输入6位数字激活"
+                placeholder="输入交易单号后 6 位"
                 value={verifyCode}
                 onChange={e => setVerifyCode(e.target.value)}
                 maxLength={6}
@@ -1150,7 +1150,7 @@ export default function App() {
                     showToast('🎉 激活成功！现在可以无限使用了', 'success')
                     refreshUsage()
                   } else {
-                    showToast('请输入6位数字', 'warning')
+                    showToast('请输入交易单号后 6 位', 'warning')
                   }
                 }}
               >
