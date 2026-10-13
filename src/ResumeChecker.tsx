@@ -198,12 +198,12 @@ export default function ResumeChecker() {
       if (!res.ok) throw new Error(`API错误 ${res.status}`)
       const data = await res.json()
       setPolishedResult(data.choices?.[0]?.message?.content || '优化失败，请重试')
-    } catch (err: any) {
+    } catch {
       setPolishedResult('AI 优化服务暂时不可用，请稍后重试。\n\n以下为规则引擎给出的建议：\n' + report.atsTips.join('\n'))
     } finally {
       setPolishedLoading(false)
     }
-  }, [report, resumeText, vip])
+  }, [report, resumeText, vip, openPay])
 
   // VIP 验证（真校验：源码只存激活码哈希，输任意数字不再放行）
   const handleVerify = () => {
@@ -249,9 +249,10 @@ export default function ResumeChecker() {
             <div style="font-size:40px;margin-bottom:8px;">🎉</div>
             <div style="font-size:16px;font-weight:700;margin-bottom:4px;">会员已恢复！</div>
             <div style="font-size:13px;color:#64748b;margin-bottom:12px;">有效期至 ${new Date(Date.now() + VIP_DAYS * 86400000).toLocaleDateString()}</div>
-            <button style="width:100%;padding:12px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;" onclick="this.closest('[style*=\"fixed\"]').remove()">开始使用</button>
+            <button data-close style="width:100%;padding:12px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;">开始使用</button>
           </div>
         </div>`
+        el2.querySelector('[data-close]')?.addEventListener('click', () => el2.remove())
         document.body.appendChild(el2)
         return
       }
@@ -275,9 +276,10 @@ export default function ResumeChecker() {
           <div style="font-size:16px;font-weight:700;margin-bottom:8px;">已解锁 · 请保存会员码</div>
           <div style="font-size:22px;font-weight:800;letter-spacing:2px;color:#2563eb;background:#eff6ff;padding:12px;border-radius:12px;margin-bottom:8px;font-family:monospace;" id="memberCodeDisplay">${memberCode}</div>
           <div style="font-size:12px;color:#64748b;margin-bottom:16px;line-height:1.5;">换设备/清缓存后，在解锁框里输入此会员码即可恢复。建议截图保存！</div>
-          <button style="width:100%;padding:12px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;" onclick="this.closest('[style*=\"fixed\"]').remove()">✅ 已截图保存</button>
+          <button data-close style="width:100%;padding:12px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;">✅ 已截图保存</button>
         </div>
       </div>`
+      el.querySelector('[data-close]')?.addEventListener('click', () => el.remove())
       document.body.appendChild(el)
     })()
   }

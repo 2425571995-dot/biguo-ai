@@ -139,6 +139,7 @@ export default function AigcChecker() {
   const [copied, setCopied] = useState(false)
   const [showSop, setShowSop] = useState(false)
   const [showService, setShowService] = useState(false)
+  const [hint, setHint] = useState('')
 
   const charCount = useMemo(() => input.replace(/\s/g, '').length, [input])
   const report = useMemo(() => (result ? buildReport(result, charCount) : ''), [result, charCount])
@@ -146,9 +147,10 @@ export default function AigcChecker() {
   const handleAnalyze = useCallback(() => {
     const r = analyze(input)
     if (!r) {
-      alert('正文太短啦，至少粘贴 50 字以上才有参考价值')
+      setHint(charCount === 0 ? '先粘贴一段论文内容再检测' : `才 ${charCount} 字，至少 50 字以上才有参考价值`)
       return
     }
+    setHint('')
     setResult(r)
     track('aigc_analyze', { score: r.score, band: r.band, chars: charCount, hits: r.hitCount })
     setTimeout(() => document.getElementById('aigc-result')?.scrollIntoView({ behavior: 'smooth' }), 100)
@@ -217,6 +219,14 @@ export default function AigcChecker() {
           )}
           <span style={{ fontSize: 12, color: '#98a6b6' }}>{charCount} 字</span>
         </div>
+        {hint && (
+          <div style={{
+            marginTop: 10, padding: '9px 12px', borderRadius: 8, fontSize: 12.5,
+            background: '#fef3c7', border: '1px solid #fde68a', color: '#92400e',
+          }}>
+            ⚠️ {hint}
+          </div>
+        )}
       </div>
 
       {/* Result */}

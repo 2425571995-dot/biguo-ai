@@ -477,8 +477,11 @@ export default function App() {
       const apiUrl = `${baseUrl}/chat/completions`
 
       // Build messages
-      const messages: any[] = []
-      let userContent: any[]
+      type TextPart = { type: 'text'; text: string }
+      type ImagePart = { type: 'image_url'; image_url: { url: string } }
+      type ContentPart = TextPart | ImagePart
+      const messages: { role: 'user'; content: ContentPart[] }[] = []
+      let userContent: ContentPart[]
 
       if (currentTab.needsImage && imagePreview) {
         userContent = [
@@ -535,8 +538,8 @@ export default function App() {
       }
 
       showToast('处理完成！ 🎉', 'success')
-    } catch (err: any) {
-      track('paper_analyze_error', { tab, msg: String(err?.message || '').slice(0, 80) })
+    } catch (err: unknown) {
+      track('paper_analyze_error', { tab, msg: String(err instanceof Error ? err.message : err).slice(0, 80) })
       showToast('处理失败，请检查 API Key 是否正确，或稍后重试。', 'error')
     } finally {
       setLoading(false)
@@ -555,13 +558,16 @@ export default function App() {
     }
   }, [output, showToast])
 
-  // Reset state when tab changes
-  useEffect(() => {
+  // 切换标签：把原先 useEffect 里的重置搬到这里，
+  // 避免「先渲染旧状态再 effect 重置」导致的额外渲染与闪烁
+  const switchTab = useCallback((next: TabKey) => {
+    setTab(next)
     setOutput('')
     setInput('')
     setModifyNote('')
-    handleRemoveImage()
-  }, [tab]) // eslint-disable-line react-hooks/exhaustive-deps
+    setImagePreview('')
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }, [])
 
   // On mount: check URL params and show first-time guide
   useEffect(() => {
@@ -587,20 +593,20 @@ export default function App() {
       })()
     }
 
-    // Referral tracking
+    // Referral tracking（用 queueMicrotask 把 setState 移出 effect 同步体，避免级联渲染告警）
     const ref = params.get('ref')
     if (ref && ref.length >= 4) {
       const visitedKey = 'biguoai_ref_visited_' + ref
       if (!localStorage.getItem(visitedKey)) {
         localStorage.setItem(visitedKey, '1')
         addBonusUses(3)
-        showToast('🎉 通过好友链接进入，已获得 +3 次免费机会！', 'success')
+        queueMicrotask(() => showToast('🎉 通过好友链接进入，已获得 +3 次免费机会！', 'success'))
       }
     }
 
     // First-time guide popup
     if (!savedApiKey && !localStorage.getItem(STORAGE_KEY_GUIDE)) {
-      openConfig('firstTime')
+      queueMicrotask(() => openConfig('firstTime'))
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -783,7 +789,7 @@ export default function App() {
           <button
             key={t.key}
             className={`tab${tab === t.key ? ' active' : ''}`}
-            onClick={() => setTab(t.key)}
+            onClick={() => switchTab(t.key)}
           >
             {t.icon} {t.label}
           </button>
@@ -797,7 +803,7 @@ export default function App() {
           <button
             key={t.key}
             className={`tab review${tab === t.key ? ' active' : ''}`}
-            onClick={() => setTab(t.key)}
+            onClick={() => switchTab(t.key)}
           >
             {t.icon} {t.label}
           </button>
@@ -969,7 +975,10 @@ export default function App() {
                 style={{ borderColor: '#8b5cf6', color: '#6d28d9' }}
                 onClick={() => {
                   if (!output) return
+                  // 这里刻意不用 switchTab：需要把 output 带进 input 作为润色素材
                   setInput(output)
+                  setOutput('')
+                  setModifyNote('')
                   setTab('runshe')
                   showToast('🔄 已切换到润色模式', 'success')
                   window.scrollTo({ top: 0, behavior: 'smooth' })
