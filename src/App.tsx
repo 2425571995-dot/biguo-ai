@@ -728,7 +728,7 @@ export default function App() {
             </div>
 
             <div style={{ marginTop: 8, fontSize: 10, color: 'rgba(255,255,255,0.5)' }}>
-              🔍 评分免费不限次 · 完整报告 ¥6.9 解锁
+              🔍 检测与诊断全免费 · 不限次
             </div>
           </div>
         </div>
