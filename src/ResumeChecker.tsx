@@ -297,7 +297,7 @@ export default function ResumeChecker() {
       {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <a href="#" style={{
+          <a href="#paper" style={{
             fontSize: 12, color: '#64748b', textDecoration: 'none',
             padding: '4px 10px', borderRadius: 14, background: '#f1f5f9',
           }}>

@@ -185,7 +185,7 @@ export default function AigcChecker() {
             <div style={{ fontSize: 11, color: '#8a97a6' }}>全程本地分析 · 文字不上传 · 不限次数</div>
           </div>
         </div>
-        <a href="#" onClick={e => { e.preventDefault(); window.location.hash = '' }} style={{ fontSize: 12, color: '#2563eb', textDecoration: 'none', padding: '5px 12px', borderRadius: 14, background: '#eff6ff', fontWeight: 500 }}>
+        <a href="#paper" style={{ fontSize: 12, color: '#2563eb', textDecoration: 'none', padding: '5px 12px', borderRadius: 14, background: '#eff6ff', fontWeight: 500 }}>
           ← 论文助手
         </a>
       </header>
