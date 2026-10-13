@@ -3,6 +3,7 @@ import { analyzeResume, buildResumePolishPrompt, detectJobCategory, type ATSRepo
 import { track } from './analytics'
 import { isCodeValid, issueMemberCode, getIssuedMemberCodes, normalizeCode } from './vip'
 import { buildShareCard, downloadBlob } from './shareCard'
+import { useModal } from './useModal'
 
 // ====== Config ======
 // 从 localStorage 读取用户配置的 API（与论文助手共享配置）
@@ -94,6 +95,9 @@ export default function ResumeChecker() {
   const [verifyCode, setVerifyCode] = useState('')
   const [verifying, setVerifying] = useState(false)
   const [sharing, setSharing] = useState(false)
+
+  // 弹窗交互：Esc 关闭 + 锁背景滚动
+  useModal(useCallback(() => { setShowPayment(false); setShowService(false) }, []), showPayment || showService)
   const [vip, setVip] = useState(isVip())
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['keywords', 'format']))
 

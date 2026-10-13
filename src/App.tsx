@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { track, countFunnel, clearEvents, PAPER_FUNNEL } from './analytics'
 import { isCodeValid, addLocalCodeHash, hashCode, generateVipCode, normalizeCode } from './vip'
+import { useModal } from './useModal'
 // ====== Types ======
 type TabKey =
   | 'jiangchong' | 'runshe' | 'gaixie' | 'fanyi' | 'kuoxie'
@@ -341,6 +342,16 @@ export default function App() {
   const [showApiKeyPrompt, setShowApiKeyPrompt] = useState(false)
   const [intensity, setIntensity] = useState('中度')
   const [modifyNote, setModifyNote] = useState('')
+
+  // 弹窗交互：Esc 关闭 + 锁背景滚动。
+  // 首次配置弹窗不响应 Esc（必须先填或显式选 Demo），避免误关后用户不知道怎么用。
+  const closeTransientModals = useCallback(() => {
+    setShowShareModal(false)
+    setShowPayment(false)
+    setShowAdmin(false)
+    if (configMode !== 'firstTime') setShowConfig(false)
+  }, [configMode])
+  useModal(closeTransientModals, showShareModal || showPayment || showAdmin || showConfig)
 
   const siteUrl = window.location.origin + window.location.pathname
   const shareLink = siteUrl + '?ref=' + getUserShareId()
